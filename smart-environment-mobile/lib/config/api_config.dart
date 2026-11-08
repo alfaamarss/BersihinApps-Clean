@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart'
 class ApiConfig {
   static const String _localHostUrl = 'http://127.0.0.1:8000/api/v1';
   // Android emulators use 10.0.2.2 to reach the host machine.
-  static const String _androidEmulatorUrl = 'http://10.0.2.2:8000/api/v1';
+
 
   // Resolve base URL with priority: dart-define > local backend.
   static String get baseUrl {
@@ -18,13 +18,46 @@ class ApiConfig {
     }
 
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return _androidEmulatorUrl;
+      // Gunakan 127.0.0.1 agar HP fisik via USB (adb reverse) langsung terhubung
+      return _localHostUrl;
     }
 
     return _localHostUrl;
   }
 
   static String get serverUrl => Uri.parse(baseUrl).origin;
+
+  /// Helper untuk memformat path foto dari API menjadi full URL yang valid
+  static String? formatImageUrl(String? path) {
+    if (path == null || path.trim().isEmpty) return null;
+    var trimmed = path.trim();
+
+    // Jika URL mengarah ke localhost atau 10.0.2.2, ganti dengan origin server yang aktif
+    if (trimmed.startsWith('http://localhost') ||
+        trimmed.startsWith('http://10.0.2.2') ||
+        trimmed.startsWith('https://localhost')) {
+      final origin = serverUrl;
+      trimmed = trimmed.replaceFirst(
+          RegExp(r'^https?://(localhost|10\.0\.2\.2)(:\d+)?'), origin);
+      return trimmed;
+    }
+
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+
+    // Bersihkan leading slash
+    if (trimmed.startsWith('/')) {
+      trimmed = trimmed.substring(1);
+    }
+
+    // Jika path mengarah ke pickups/ atau uploads/ tapi belum diawali storage/
+    if (!trimmed.startsWith('storage/')) {
+      trimmed = 'storage/$trimmed';
+    }
+
+    return '$serverUrl/$trimmed';
+  }
 
   static bool _isLocalHost(String host) {
     return host == 'localhost' ||

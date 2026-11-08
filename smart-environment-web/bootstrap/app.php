@@ -53,7 +53,20 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($e instanceof Illuminate\Database\Eloquent\ModelNotFoundException) {
                 return $makeResponse(false, null, 404, 'Resource not found');
             }
+            if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) {
+                $status = $e->getStatusCode();
+                $message = match ($status) {
+                    404 => 'Resource not found',
+                    405 => 'Method not allowed',
+                    403 => 'Forbidden',
+                    401 => 'Unauthenticated',
+                    409 => 'Conflict',
+                    default => $e->getMessage() ?: 'HTTP error',
+                };
+                return $makeResponse(false, null, $status, $message);
+            }
 
+            \Illuminate\Support\Facades\Log::error($e->getMessage(), ['exception' => $e]);
             return $makeResponse(false, null, 500, 'Server error');
         });
     })->create();

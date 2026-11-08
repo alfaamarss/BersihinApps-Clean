@@ -1,4 +1,4 @@
-import 'package:sirkular_app/utils/app_log.dart';
+import 'package:beresin_app/utils/app_log.dart';
 class OffSchedulePickup {
   final int id;
   final ServiceAccount? serviceAccount;

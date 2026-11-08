@@ -293,7 +293,9 @@ class PaymentController extends Controller
                 'expired_at' => isset($transactionResult['expired_at']) 
                     ? Carbon::parse($transactionResult['expired_at'])
                     : now()->addMinutes($this->getExpiryMinutes($paymentType)),
-                'midtrans_response' => json_encode($transactionResult),
+                'midtrans_response' => json_encode(array_merge($transactionResult, [
+                    'target_invoice_ids' => $invoices->pluck('id')->toArray(),
+                ])),
             ]);
 
             // Update invoices with payment info
@@ -520,6 +522,65 @@ class PaymentController extends Controller
     }
 
     /**
+     * Simulate successful payment (Sandbox/Testing helper)
+     * 
+     * POST /api/v1/mobile/resident/payments/{orderId}/simulate-pay
+     */
+    public function simulatePay(string $orderId)
+    {
+        if (!app()->environment('local', 'testing')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Simulate payment is disabled in production.'
+            ], 403);
+        }
+
+        $user = Auth::user();
+
+        try {
+            $payment = Payment::where('order_id', $orderId)->first();
+
+            if (!$payment) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Transaksi pembayaran tidak ditemukan'
+                ], 404);
+            }
+
+            if ($payment->status === 'success') {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Pembayaran sudah berstatus lunas (success)',
+                    'payment' => $this->formatPaymentResponse($payment)
+                ]);
+            }
+
+            // Update status ke success
+            $payment->update([
+                'status' => 'success',
+                'settlement_time' => now(),
+            ]);
+
+            // Lunasi invoice terkait
+            $this->markInvoicesAsPaid($payment);
+
+            Log::info("Sandbox simulation payment success for order: {$orderId}");
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Simulasi pembayaran sandbox berhasil! Tagihan Anda telah lunas.',
+                'payment' => $this->formatPaymentResponse($payment->fresh())
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Simulate Pay Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memproses simulasi pembayaran: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Get payment details
      * 
      * GET /api/v1/mobile/resident/payments/{orderId}
@@ -617,34 +678,36 @@ class PaymentController extends Controller
     private function markInvoicesAsPaid(Payment $payment): void
     {
         DB::transaction(function () use ($payment) {
-            // Get invoice and related invoices with same order
-            $invoice = $payment->invoice;
-            
-            // Mark as paid
-            $invoice->update([
-                'status' => 'paid',
-                'paid_at' => now(),
-            ]);
-            $this->markRequestIfNeeded($invoice);
+            $targetInvoiceIds = [];
+            if (!empty($payment->midtrans_response)) {
+                $decoded = is_string($payment->midtrans_response) 
+                    ? json_decode($payment->midtrans_response, true) 
+                    : $payment->midtrans_response;
+                if (!empty($decoded['target_invoice_ids']) && is_array($decoded['target_invoice_ids'])) {
+                    $targetInvoiceIds = $decoded['target_invoice_ids'];
+                }
+            }
 
-            // Also mark other invoices with same payment_type and created around same time
-            $relatedInvoices = Invoice::where('status', 'unpaid')
-                ->where('payment_type', $payment->payment_type)
-                ->where('payment_channel', $payment->payment_channel)
-                ->whereHas('serviceAccount', function ($query) use ($invoice) {
-                    $query->where('user_id', $invoice->serviceAccount->user_id);
-                })
-                ->whereBetween('created_at', [
-                    $payment->created_at->subMinutes(5),
-                    $payment->created_at->addMinutes(5)
-                ])->get();
+            if (empty($targetInvoiceIds) && $payment->invoice_id) {
+                $targetInvoiceIds = [$payment->invoice_id];
+            }
 
-            foreach ($relatedInvoices as $relatedInvoice) {
-                $relatedInvoice->update([
+            // Mark target invoices as paid (fixing 'unpaid' typo to 'not_paid')
+            $invoices = Invoice::whereIn('id', $targetInvoiceIds)
+                ->whereIn('status', ['not_paid', 'unpaid'])
+                ->get();
+
+            // Fallback for single main invoice if not yet found
+            if ($invoices->isEmpty() && $payment->invoice) {
+                $invoices = collect([$payment->invoice]);
+            }
+
+            foreach ($invoices as $inv) {
+                $inv->update([
                     'status' => 'paid',
                     'paid_at' => now(),
                 ]);
-                $this->markRequestIfNeeded($relatedInvoice);
+                $this->markRequestIfNeeded($inv);
             }
         });
     }
@@ -689,23 +752,29 @@ class PaymentController extends Controller
                 'payload' => $request->all()
             ]);
 
-            // Verify webhook signature (TEMPORARILY DISABLED FOR TESTING)
+            $orderId = $request->input('order_id');
+            $statusCode = $request->input('status_code');
+            $grossAmount = $request->input('gross_amount');
+            $signatureKey = $request->input('signature_key');
+
+            // 1. Validasi parameter wajib
+            if (!$orderId || !$statusCode || !$grossAmount || !$signatureKey) {
+                Log::warning('Midtrans Webhook: Incomplete payload', $request->all());
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid payload format'
+                ], 400);
+            }
+
+            // 2. Verifikasi HMAC SHA-512 signature
             $serverKey = config('services.midtrans.server_key');
-            $orderId = $request->order_id;
-            $statusCode = $request->status_code;
-            $grossAmount = $request->gross_amount;
-            $signatureKey = $request->signature_key;
+            $expectedSignature = hash('sha512', $orderId . $statusCode . $grossAmount . $serverKey);
 
-            $mySignature = hash('sha512', $orderId . $statusCode . $grossAmount . $serverKey);
-
-            // TEMPORARILY COMMENTED OUT FOR TESTING - RE-ENABLE IN PRODUCTION!
-            /*
-            if ($signatureKey !== $mySignature) {
+            if (!hash_equals($expectedSignature, $signatureKey)) {
                 Log::warning('Midtrans Webhook: Invalid signature', [
                     'order_id' => $orderId,
-                    'expected' => $mySignature,
+                    'expected' => $expectedSignature,
                     'received' => $signatureKey,
-                    'server_key_used' => substr($serverKey, 0, 10) . '...'
                 ]);
                 
                 return response()->json([
@@ -713,15 +782,8 @@ class PaymentController extends Controller
                     'message' => 'Invalid signature'
                 ], 401);
             }
-            */
-            
-            Log::info('Midtrans Webhook: Signature check DISABLED for testing', [
-                'order_id' => $orderId,
-                'expected' => $mySignature,
-                'received' => $signatureKey
-            ]);
 
-            // Find payment by order_id
+            // 3. Cari pembayaran berdasarkan order_id
             $payment = Payment::where('order_id', $orderId)->first();
 
             if (!$payment) {
@@ -733,6 +795,20 @@ class PaymentController extends Controller
                     'success' => false,
                     'message' => 'Payment not found'
                 ], 404);
+            }
+
+            // 4. Verifikasi kecocokan nominal pembayaran (Financial Fraud Prevention)
+            if ((int) round($payment->amount) !== (int) round($grossAmount)) {
+                Log::warning('Midtrans Webhook: Amount mismatch', [
+                    'order_id' => $orderId,
+                    'payment_amount' => $payment->amount,
+                    'gross_amount' => $grossAmount,
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gross amount mismatch'
+                ], 422);
             }
 
             // Get transaction status
@@ -767,7 +843,7 @@ class PaymentController extends Controller
 
                 // If payment failed or expired, reset invoice payment info
                 if (in_array($newStatus, ['failed', 'expired'])) {
-                    $payment->invoice->update([
+                    $payment->invoice?->update([
                         'payment_type' => null,
                         'payment_channel' => null,
                     ]);

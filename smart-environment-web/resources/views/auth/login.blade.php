@@ -7,7 +7,7 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <title>Login | {{ isset($appSettings) ? $appSettings->app_name : config('app.name', 'Bersihin') }}</title>
     <link href="https://cdn.tailwindcss.com" rel="stylesheet">
-    <link href="{{ asset('assets/images/logo/sirkular.png') }}" rel="icon">
+    <link href="{{ asset('assets/images/logo/beresin-icon.png') }}" rel="icon">
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
@@ -40,9 +40,9 @@
                 @endphp
 
                 @if($logoUrl)
-                    <img class="h-16 w-16 object-contain drop-shadow-lg" src="{{ $logoUrl }}" alt="Logo" />
+                    <img class="h-16 w-auto max-w-[220px] object-contain drop-shadow-lg bg-white px-3 py-1.5 rounded-xl" src="{{ $logoUrl }}" alt="Logo" />
                 @else
-                    <img class="h-16 w-16 drop-shadow-lg" src="{{ asset('assets/images/logo/sirkular.png') }}" alt="Logo" />
+                    <img class="h-16 w-auto max-w-[220px] object-contain drop-shadow-lg bg-white px-3 py-1.5 rounded-xl" src="{{ asset('assets/images/logo/beresin.png') }}" alt="Logo" />
                 @endif
 
                 <div class="text-white">

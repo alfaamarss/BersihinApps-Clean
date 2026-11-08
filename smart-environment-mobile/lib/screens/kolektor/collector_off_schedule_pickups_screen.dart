@@ -1,4 +1,4 @@
-import 'package:sirkular_app/utils/app_log.dart';
+import 'package:beresin_app/utils/app_log.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -38,33 +38,18 @@ class _CollectorOffSchedulePickupsScreenState
     try {
       final service = CollectorOffSchedulePickupService();
 
-      // ✅ PERBAIKAN: Filter berdasarkan tanggal hari ini untuk status pending/processing
-      final today = DateTime.now();
-      final todayStr =
-          '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-
       final pickups = await service.listAssignedPickups(
         status: _selectedStatus.isEmpty ? null : _selectedStatus,
       );
 
       if (!mounted) return;
 
-      // ✅ Filter pickup berdasarkan tanggal request untuk status yang belum selesai
-      // Pickup hanya muncul saat tanggal request = hari ini
+      // Filter pickup yang valid (bukan cancelled atau rejected)
       final filteredPickups = pickups.where((pickup) {
-        final requestDate = pickup['requested_pickup_date'] as String?;
+        final status = pickup['status'] as String?;
         final requestStatus = pickup['request_status'] as String?;
 
-        // Untuk status completed/rejected, tampilkan semua (tidak filter tanggal)
-        if (requestStatus == 'completed' || requestStatus == 'rejected') {
-          return true;
-        }
-
-        // Untuk status pending/processing, hanya tampilkan jika tanggal = hari ini
-        if (requestDate != null && requestDate != todayStr) {
-          appLog(
-            '📅 [Filter] Pickup skipped - request date: $requestDate, today: $todayStr',
-          );
+        if (status == 'cancelled' || requestStatus == 'rejected') {
           return false;
         }
 

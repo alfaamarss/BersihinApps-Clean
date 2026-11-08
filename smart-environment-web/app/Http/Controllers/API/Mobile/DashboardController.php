@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API\Mobile;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Models\WasteDelivery;
 use App\Support\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -27,13 +28,15 @@ class DashboardController extends Controller
             ->orderByDesc('issued_at')
             ->get();
 
-        $nextPickup = $user->wasteDeliveries()
+        $nextPickup = WasteDelivery::query()
+            ->whereIn('service_account_id', $serviceAccountIds)
             ->with('serviceAccount.area.parent')
-            ->whereIn('status', ['scheduled', 'on_progress'])
+            ->whereIn('status', ['pending', 'confirmed', 'in_progress', 'scheduled', 'on_progress'])
             ->orderBy('scheduled_at')
             ->first();
 
-        $recentDeliveries = $user->wasteDeliveries()
+        $recentDeliveries = WasteDelivery::query()
+            ->whereIn('service_account_id', $serviceAccountIds)
             ->with('serviceAccount')
             ->orderByDesc('scheduled_at')
             ->limit(5)

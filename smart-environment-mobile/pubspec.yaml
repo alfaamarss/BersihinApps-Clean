@@ -1,4 +1,4 @@
-name: sirkular_app
+name: beresin_app
 description: "A new Flutter project."
 publish_to: 'none'
 
@@ -45,9 +45,9 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/images/sirkular.png"
+  image_path: "assets/images/app_icon.png"
   adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/images/sirkular.png"
+  adaptive_icon_foreground: "assets/images/app_icon_foreground.png"
 
 flutter:
   uses-material-design: true

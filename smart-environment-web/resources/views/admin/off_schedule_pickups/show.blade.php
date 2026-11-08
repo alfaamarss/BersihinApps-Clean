@@ -47,11 +47,11 @@
         </div>
         <div>
           <dt class="text-sm text-gray-500">Jumlah kantong</dt>
-          <dd class="text-base font-semibold text-black dark:text-white">{{ $delivery->bag_count }} kantong</dd>
+          <dd class="text-base font-semibold text-black dark:text-white">{{ $delivery->bag_count ?: ($delivery->wasteDeliveryItems?->sum('quantity') ?: 0) }} kantong</dd>
         </div>
         <div>
           <dt class="text-sm text-gray-500">Perkiraan biaya</dt>
-          <dd class="text-base font-semibold text-black dark:text-white">Rp {{ number_format($delivery->base_amount, 0, ',', '.') }}</dd>
+          <dd class="text-base font-semibold text-black dark:text-white">Rp {{ number_format($delivery->base_amount ?: ($delivery->wasteDeliveryItems?->sum('total_price') ?: 0), 0, ',', '.') }}</dd>
         </div>
         <div>
           <dt class="text-sm text-gray-500">Biaya tambahan</dt>
@@ -89,7 +89,7 @@
               @endforeach
               <tr class="border-t-2 border-gray-300 dark:border-gray-600">
                 <td colspan="4" class="py-2 text-right font-medium text-gray-500">Subtotal:</td>
-                <td class="py-2 text-right font-semibold text-black dark:text-white">Rp {{ number_format($delivery->base_amount, 0, ',', '.') }}</td>
+                <td class="py-2 text-right font-semibold text-black dark:text-white">Rp {{ number_format($delivery->base_amount ?: ($delivery->wasteDeliveryItems?->sum('total_price') ?: 0), 0, ',', '.') }}</td>
               </tr>
               <tr>
                 <td colspan="4" class="py-2 text-right font-medium text-gray-500">Biaya Tambahan:</td>
@@ -115,11 +115,29 @@
           <p class="text-base text-black dark:text-white mt-1">{{ $delivery->collector_notes ?? '-' }}</p>
         </div>
         <div>
-          <h3 class="text-sm font-semibold text-gray-500 uppercase">Bukti Pickup</h3>
-          @if($delivery->photo_url)
-            <img src="{{ Storage::url($delivery->photo_url) }}" alt="Bukti pickup" class="mt-2 rounded-lg border border-gray-200 max-w-md">
+          <h3 class="text-sm font-semibold text-gray-500 uppercase mb-2">Bukti Pickup</h3>
+          @php
+            $photoSrc = $delivery->photo_display_url ?? ($delivery->photo_url ? Storage::url($delivery->photo_url) : null);
+          @endphp
+          @if($photoSrc)
+            <div class="mt-2">
+              <a href="{{ $photoSrc }}" target="_blank" class="group inline-block relative overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm bg-gray-50 dark:bg-gray-800 p-1">
+                <img src="{{ $photoSrc }}" 
+                     alt="Bukti pickup" 
+                     class="rounded-lg max-h-96 w-auto max-w-md object-contain hover:scale-[1.01] transition-transform duration-200"
+                     onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'p-4 text-sm text-red-500 bg-red-50 rounded-lg flex items-center gap-2\'><i class=\'fas fa-exclamation-triangle\'></i> Gagal memuat file foto bukti.</div>';">
+                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 rounded-xl">
+                  <span class="bg-white/90 dark:bg-gray-900/90 text-gray-800 dark:text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow">
+                    <i class="fas fa-search-plus mr-1"></i> Buka Gambar Penuh
+                  </span>
+                </div>
+              </a>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
+                <i class="fas fa-info-circle text-primary-500"></i> Klik foto untuk melihat resolusi penuh
+              </p>
+            </div>
           @else
-            <p class="text-sm text-gray-500">Belum ada foto</p>
+            <p class="text-sm text-gray-400 italic mt-1">Belum ada foto bukti</p>
           @endif
         </div>
       </div>
@@ -224,15 +242,15 @@
         </form>
       </div>
 
-      <!-- <div>
-        <h3 class="text-lg font-semibold text-black dark:text-white">Update Biaya</h3>
+      <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+        <h3 class="text-lg font-semibold text-black dark:text-white mb-2">Perbarui Estimasi Biaya</h3>
         <form action="{{ route('admin.off-schedule-pickups.update-cost', $delivery->id) }}" method="POST" class="space-y-3">
           @csrf
-          <x-form.input name="bag_count" label="Jumlah kantong" type="number" min="0" value="{{ old('bag_count', $delivery->bag_count) }}" />
-          <x-form.input name="extra_fee" label="Biaya tambahan" type="number" step="1000" value="{{ old('extra_fee', $delivery->extra_fee ?: $defaultSurcharge) }}" />
-          <x-button type="submit" variant="secondary" class="w-full">Perbarui estimasi</x-button>
+          <x-form.input name="bag_count" label="Perkiraan jumlah kantong" type="number" min="0" value="{{ old('bag_count', $delivery->bag_count) }}" />
+          <x-form.input name="extra_fee" label="Biaya tambahan (surcharge)" type="number" step="1000" value="{{ old('extra_fee', $delivery->extra_fee ?: $defaultSurcharge) }}" />
+          <x-button type="submit" variant="secondary" class="w-full">Simpan Perubahan Biaya</x-button>
         </form>
-      </div> -->
+      </div>
 
       <div>
         <h3 class="text-lg font-semibold text-black dark:text-white">Aksi</h3>

@@ -1,4 +1,4 @@
-import 'package:sirkular_app/utils/app_log.dart';
+import 'package:beresin_app/utils/app_log.dart';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';

@@ -74,7 +74,7 @@
                 {{ $delivery->assignedCollector->name ?? 'Belum ditugaskan' }}
               </td>
               <td class="px-4 py-4">
-                {{ $delivery->bag_count }} kantong
+                {{ $delivery->bag_count ?: ($delivery->wasteDeliveryItems->sum('quantity') ?: 0) }} kantong
               </td>
               <td class="px-4 py-4 font-semibold">
                 Rp {{ number_format($delivery->total_amount, 0, ',', '.') }}

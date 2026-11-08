@@ -181,6 +181,14 @@ class OffSchedulePickupController extends Controller
     {
         $resident = $request->user();
 
+        if ($request->filled('requested_pickup_time') && is_string($request->input('requested_pickup_time'))) {
+            $timeStr = trim($request->input('requested_pickup_time'));
+            if (preg_match('/^(\d{1,2}:\d{2})/', $timeStr, $matches)) {
+                $timeParts = explode(':', $matches[1]);
+                $request->merge(['requested_pickup_time' => sprintf('%02d:%02d', (int)$timeParts[0], (int)$timeParts[1])]);
+            }
+        }
+
         $data = $request->validate([
             'service_account_id' => 'required|exists:service_accounts,id',
             'requested_pickup_date' => 'required|date|after_or_equal:today',

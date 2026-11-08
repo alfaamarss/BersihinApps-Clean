@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:sirkular_app/utils/app_log.dart';
+import 'package:beresin_app/utils/app_log.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

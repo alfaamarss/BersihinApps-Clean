@@ -60,7 +60,7 @@ class User extends Authenticatable
 
     public function wasteDeliveries()
     {
-        return $this->hasMany(WasteDelivery::class);
+        return $this->hasManyThrough(WasteDelivery::class, ServiceAccount::class);
     }
 
     public function invoices()

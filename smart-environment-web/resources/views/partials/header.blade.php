@@ -68,10 +68,10 @@
       <!-- Hamburger Toggle BTN -->
 
       <a href="index.html" class="lg:hidden">
-        <img class="dark:hidden" src="./images/logo/sirkular.png" alt="Logo" />
+        <img class="dark:hidden" src="./images/logo/beresin.png" alt="Logo" />
         <img
           class="hidden dark:block"
-          src="./images/logo/sirkular.png"
+          src="./images/logo/beresin.png"
           alt="Logo"
         />
       </a>

@@ -276,7 +276,7 @@
                         <h3 class="text-lg font-semibold text-gray-800 dark:text-white">Foto Bukti Pengambilan</h3>
                     </div>
                     <div class="relative group">
-                        <img src="{{ Storage::url($pickup->photo_url) }}" 
+                        <img src="{{ $pickup->photo_display_url ?? Storage::url($pickup->photo_url) }}" 
                              alt="Bukti Pengambilan Sampah"
                              class="w-full max-h-96 object-contain rounded-xl border border-gray-200 dark:border-gray-600 cursor-pointer"
                              onclick="openImageModal(this.src)">

@@ -51,7 +51,11 @@ class Article extends Model
             return null;
         }
 
-        return asset('storage/' . $this->featured_image);
+        if (str_starts_with($this->featured_image, 'http://') || str_starts_with($this->featured_image, 'https://')) {
+            return $this->featured_image;
+        }
+
+        return asset('storage/' . ltrim($this->featured_image, '/'));
     }
 
     /**

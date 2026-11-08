@@ -7,6 +7,7 @@ use App\Models\Payment;
 use App\Services\VirtualAccountService;
 use App\Support\ApiResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -82,6 +83,10 @@ class InvoicesController extends BaseResourceController
      */
     public function confirmPayment(Request $request, $id)
     {
+        if (!Auth::user()?->hasRole('admin')) {
+            return ApiResponse::error('Unauthorized. Only administrators can manually confirm invoice payments.', 403);
+        }
+
         $validated = $request->validate([
             'amount' => 'required|numeric|min:0',
             'payment_method' => 'required|string|in:va_bca,va_mandiri,va_bni,va_bri,va_permata,cash,transfer',

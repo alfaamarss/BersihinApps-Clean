@@ -24,6 +24,11 @@ class Schedule extends Model
         'auto_generate_delivery' => 'boolean',
     ];
 
+    public function setDayOfWeekAttribute($value)
+    {
+        $this->attributes['day_of_week'] = ucfirst(strtolower($value));
+    }
+
     public function area()
     {
         return $this->belongsTo(Area::class);

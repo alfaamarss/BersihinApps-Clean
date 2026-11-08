@@ -9,10 +9,10 @@
   >
     <a href="index.html">
       <span class="logo" :class="sidebarToggle ? 'hidden' : ''">
-        <img class="dark:hidden" src="./images/logo/sirkular.png" alt="Logo" />
+        <img class="dark:hidden" src="./images/logo/beresin.png" alt="Logo" />
         <img
           class="hidden dark:block"
-          src="./images/logo/sirkular.png"
+          src="./images/logo/beresin.png"
           alt="Logo"
         />
       </span>
@@ -20,7 +20,7 @@
       <img
         class="logo-icon"
         :class="sidebarToggle ? 'lg:block' : 'hidden'"
-        src="./images/logo/sirkular.png"
+        src="./images/logo/beresin.png"
         alt="Logo"
       />
     </a>

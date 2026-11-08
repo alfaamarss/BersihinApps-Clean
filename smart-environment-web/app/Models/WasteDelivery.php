@@ -110,4 +110,21 @@ class WasteDelivery extends Model
     {
         return $this->collector?->id;
     }
+
+    /**
+     * Get clean, valid full URL for photo evidence
+     */
+    public function getPhotoDisplayUrlAttribute(): ?string
+    {
+        if (empty($this->photo_url)) {
+            return null;
+        }
+
+        if (str_starts_with($this->photo_url, 'http://') || str_starts_with($this->photo_url, 'https://')) {
+            return $this->photo_url;
+        }
+
+        $cleanPath = ltrim(preg_replace('#^/?storage/#', '', $this->photo_url), '/');
+        return asset('storage/' . $cleanPath);
+    }
 }

@@ -1,4 +1,4 @@
-import 'package:sirkular_app/utils/app_log.dart';
+import 'package:beresin_app/utils/app_log.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../screens/user/notification_service.dart';

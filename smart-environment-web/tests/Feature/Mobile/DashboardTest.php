@@ -63,8 +63,7 @@ class DashboardTest extends TestCase
 
         $deliveryUpcoming = WasteDelivery::create([
             'service_account_id' => $serviceAccount->id,
-            'user_id' => $user->id,
-            'status' => 'scheduled',
+            'status' => 'pending',
             'scheduled_at' => Carbon::now()->addDay(),
             'note' => 'Penjemputan mingguan',
             'total_amount' => 125000,
@@ -72,7 +71,6 @@ class DashboardTest extends TestCase
 
         $deliveryPast = WasteDelivery::create([
             'service_account_id' => $serviceAccount->id,
-            'user_id' => $user->id,
             'status' => 'collected',
             'scheduled_at' => Carbon::now()->subDays(3),
             'note' => 'Sudah diambil',

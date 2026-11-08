@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.sirkular_app">
+    package="com.example.beresin_app">
 
     <!-- ✅ Izin internet wajib untuk memuat peta -->
     <uses-permission android:name="android.permission.INTERNET"/>

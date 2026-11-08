@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.sirkular_app"
+    namespace = "com.example.beresin_app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "28.2.13676358"
 
@@ -21,7 +21,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.sirkular_app" // ✅ cocok sama userAgentPackageName di TileLayer
+        applicationId = "com.example.beresin_app" // ✅ cocok sama userAgentPackageName di TileLayer
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

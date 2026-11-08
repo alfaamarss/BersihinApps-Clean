@@ -1,4 +1,4 @@
-import 'package:sirkular_app/utils/app_log.dart';
+import 'package:beresin_app/utils/app_log.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
@@ -429,11 +429,9 @@ class _JadwalPengambilanScreenState extends State<JadwalPengambilanScreen> {
 
               // Day Headers
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
                     .map(
-                      (day) => SizedBox(
-                        width: 48,
+                      (day) => Expanded(
                         child: Center(
                           child: Text(
                             day,
@@ -505,16 +503,18 @@ class _JadwalPengambilanScreenState extends State<JadwalPengambilanScreen> {
       calendarCells.add(_buildDayCell(day, primaryColor));
     }
 
-    // Tambah empty cells untuk melengkapi grid 6x7 (42 cells)
-    final totalCells = calendarCells.length;
-    final remainingCells = (6 * 7) - totalCells;
+    // Hitung jumlah baris yang benar-benar dibutuhkan (5 atau 6)
+    final totalDaysAndPadding = startWeekday + daysInMonth;
+    final int rowCount = (totalDaysAndPadding / 7).ceil();
+    final int totalRequiredCells = rowCount * 7;
+    final remainingCells = totalRequiredCells - calendarCells.length;
     for (int i = 0; i < remainingCells; i++) {
       calendarCells.add(_buildEmptyCell());
     }
 
-    // Buat 6 baris, masing-masing 7 kolom
+    // Buat baris sesuai rowCount, masing-masing 7 kolom
     List<Widget> rows = [];
-    for (int row = 0; row < 6; row++) {
+    for (int row = 0; row < rowCount; row++) {
       final startIndex = row * 7;
       final endIndex = startIndex + 7;
 
@@ -522,7 +522,6 @@ class _JadwalPengambilanScreenState extends State<JadwalPengambilanScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: calendarCells.sublist(startIndex, endIndex),
           ),
         ),
@@ -533,7 +532,9 @@ class _JadwalPengambilanScreenState extends State<JadwalPengambilanScreen> {
   }
 
   Widget _buildEmptyCell() {
-    return const SizedBox(width: 48, height: 48);
+    return const Expanded(
+      child: SizedBox(height: 44),
+    );
   }
 
   Widget _buildDayCell(int day, Color primaryColor) {
@@ -547,35 +548,37 @@ class _JadwalPengambilanScreenState extends State<JadwalPengambilanScreen> {
         DateTime.now().month == _selectedMonth.month &&
         DateTime.now().year == _selectedMonth.year;
 
-    return GestureDetector(
-      onTap: hasSchedule ? () => _selectDate(day) : null,
-      child: Container(
-        width: 48,
-        height: 48,
-        alignment: Alignment.center,
+    return Expanded(
+      child: GestureDetector(
+        onTap: hasSchedule ? () => _selectDate(day) : null,
+        behavior: HitTestBehavior.opaque,
         child: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: isSelected
-                ? primaryColor
-                : hasSchedule
-                ? primaryColor.withValues(alpha: 0.1)
-                : Colors.transparent,
-            shape: BoxShape.circle,
-            border: isToday && !isSelected
-                ? Border.all(color: primaryColor, width: 2)
-                : null,
-          ),
-          child: Center(
-            child: Text(
-              day.toString(),
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                fontWeight: hasSchedule || isToday
-                    ? FontWeight.w600
-                    : FontWeight.w500,
-                color: isSelected ? Colors.white : Colors.black87,
+          height: 44,
+          alignment: Alignment.center,
+          child: Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? primaryColor
+                  : hasSchedule
+                  ? primaryColor.withValues(alpha: 0.1)
+                  : Colors.transparent,
+              shape: BoxShape.circle,
+              border: isToday && !isSelected
+                  ? Border.all(color: primaryColor, width: 2)
+                  : null,
+            ),
+            child: Center(
+              child: Text(
+                day.toString(),
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: hasSchedule || isToday
+                      ? FontWeight.w600
+                      : FontWeight.w500,
+                  color: isSelected ? Colors.white : Colors.black87,
+                ),
               ),
             ),
           ),

@@ -1,4 +1,4 @@
-import 'package:sirkular_app/utils/app_log.dart';
+import 'package:beresin_app/utils/app_log.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -31,6 +31,7 @@ class _PaymentProcessScreenState extends State<PaymentProcessScreen> {
   Timer? _countdownTimer;
   int _secondsRemaining = 0;
   bool _isCheckingStatus = false;
+  bool _isSimulating = false;
 
   @override
   void initState() {
@@ -181,6 +182,80 @@ class _PaymentProcessScreenState extends State<PaymentProcessScreen> {
 
             // Instructions
             _buildInstructions(),
+            const SizedBox(height: 16),
+
+            // Sandbox Simulator Card
+            if (_currentPayment.isPending)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F5E9),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFA5D6A7), width: 1.5),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.science, color: Color(0xFF2E7D32), size: 22),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Mode Sandbox / Uji Coba',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: const Color(0xFF2E7D32),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Tekan tombol di bawah untuk langsung memverifikasi pembayaran berhasil dan melunasi tagihan.',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _isSimulating ? null : _simulatePaymentSuccess,
+                        icon: _isSimulating
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.check_circle, color: Colors.white),
+                        label: Text(
+                          _isSimulating
+                              ? 'Memproses Pembayaran...'
+                              : 'Simulasikan Pembayaran Berhasil',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                            fontSize: 13,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2E7D32),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
             const SizedBox(height: 24),
           ],
@@ -696,6 +771,46 @@ class _PaymentProcessScreenState extends State<PaymentProcessScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _simulatePaymentSuccess() async {
+    if (_currentPayment.orderId == null) return;
+    setState(() => _isSimulating = true);
+
+    try {
+      final success = await _paymentService.simulatePayment(_currentPayment.orderId!);
+      if (success) {
+        await _checkPaymentStatus();
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Gagal menjalankan simulasi pembayaran',
+                style: GoogleFonts.poppins(),
+              ),
+              backgroundColor: Colors.red.shade600,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Error simulasi: $e',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.red.shade600,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSimulating = false);
+      }
+    }
   }
 
   Future<void> _cancelPayment() async {

@@ -1,4 +1,4 @@
-import 'package:sirkular_app/utils/app_log.dart';
+import 'package:beresin_app/utils/app_log.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_client.dart';
@@ -64,6 +64,19 @@ class PaymentService {
     } catch (e) {
       if (e is Exception) rethrow;
       throw Exception('Error creating payment: $e');
+    }
+  }
+
+  /// Simulate payment success (Sandbox mode)
+  Future<bool> simulatePayment(String orderId) async {
+    try {
+      final response = await _dio.post(
+        '/mobile/resident/payments/$orderId/simulate-pay',
+      );
+      return response.statusCode == 200 && response.data['success'] == true;
+    } catch (e) {
+      appLog('Error simulating payment: $e');
+      return false;
     }
   }
 

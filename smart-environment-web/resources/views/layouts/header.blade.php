@@ -45,15 +45,14 @@
                 @endphp
 
                 @if($logoUrl)
-                    <img class="h-12 w-12 object-contain" src="{{ $logoUrl }}" alt="{{ isset($appSettings) ? $appSettings->app_name : config('app.name', 'Bersihin') }}" />
+                    <img class="h-10 w-auto max-w-[160px] object-contain" src="{{ $logoUrl }}" alt="{{ isset($appSettings) ? $appSettings->app_name : 'Beresin' }}" />
+                    <span class="font-semibold text-lg text-gray-800 dark:text-white">
+                        {{ isset($appSettings) ? $appSettings->app_name : 'Beresin' }}
+                    </span>
                 @else
-                    <img class="dark:hidden h-12 w-auto object-contain" src="{{ asset('assets/images/logo/sirkular.png') }}" alt="Logo" />
-                    <img class="hidden dark:block h-12 w-auto object-contain" src="{{ asset('assets/images/logo/sirkular.png') }}" alt="Logo" />
+                    <img class="dark:hidden h-10 w-auto max-w-[170px] object-contain" src="{{ asset('assets/images/logo/beresin.png') }}" alt="Beresin" />
+                    <img class="hidden dark:block h-10 w-auto max-w-[170px] object-contain" src="{{ asset('assets/images/logo/beresin-dark.png') }}" alt="Beresin" />
                 @endif
-
-                <span class="font-semibold text-lg text-gray-800 dark:text-white">
-                    {{ isset($appSettings) ? $appSettings->app_name : config('app.name', 'Bersihin') }}
-                </span>
             </a>
 
             <!-- Application nav menu button -->

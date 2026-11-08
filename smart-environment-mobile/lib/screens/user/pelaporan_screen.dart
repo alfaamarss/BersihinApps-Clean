@@ -1,4 +1,4 @@
-import 'package:sirkular_app/utils/app_log.dart';
+import 'package:beresin_app/utils/app_log.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -1100,7 +1100,7 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen> {
                             TileLayer(
                               urlTemplate:
                                   'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                              userAgentPackageName: 'com.example.sirkular_app',
+                              userAgentPackageName: 'com.example.beresin_app',
                               maxNativeZoom: 19,
                             ),
                             if (_selectedLocation != null)
@@ -4970,7 +4970,7 @@ class _FullscreenMapScreenState extends State<_FullscreenMapScreen> {
             children: [
               TileLayer(
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.example.sirkular_app',
+                userAgentPackageName: 'com.example.beresin_app',
                 maxNativeZoom: 19,
               ),
               MarkerLayer(

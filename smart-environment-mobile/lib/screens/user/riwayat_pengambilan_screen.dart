@@ -1,4 +1,4 @@
-import 'package:sirkular_app/utils/app_log.dart';
+import 'package:beresin_app/utils/app_log.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
@@ -620,8 +620,8 @@ class _RiwayatPengambilanScreenState extends State<RiwayatPengambilanScreen> {
           serviceAccount?['alamat'] ??
           widget.accountName;
 
-      // Get photo URL - check multiple possible field names
-      String? photoUrl =
+      // Get photo URL - check multiple possible field names & format robustly
+      String? rawPhoto =
           pickup['photo_url'] as String? ??
           pickup['pickup_photo'] as String? ??
           pickup['image'] as String? ??
@@ -629,18 +629,7 @@ class _RiwayatPengambilanScreenState extends State<RiwayatPengambilanScreen> {
           pickup['photo_path'] as String? ??
           pickup['image_path'] as String?;
 
-      // Jika photo URL relatif (tidak dimulai dengan http), tambahkan base URL
-      if (photoUrl != null && photoUrl.isNotEmpty) {
-        if (!photoUrl.startsWith('http')) {
-          // Hapus leading slash jika ada
-          if (photoUrl.startsWith('/')) {
-            photoUrl = photoUrl.substring(1);
-          }
-          // Tambahkan base URL
-          final baseUrl = ApiConfig.serverUrl;
-          photoUrl = '$baseUrl/$photoUrl';
-        }
-      }
+      String? photoUrl = ApiConfig.formatImageUrl(rawPhoto);
 
       final hasPhoto = photoUrl != null && photoUrl.isNotEmpty;
 
@@ -1630,8 +1619,8 @@ class _RiwayatPengambilanScreenState extends State<RiwayatPengambilanScreen> {
     final typeLabel = isOffSchedule ? 'Request' : 'Terjadwal';
     final typeColor = isOffSchedule ? Colors.orange : const Color(0xFF009688);
 
-    // Get photo URL - check multiple possible field names
-    String? photoUrl =
+    // Get photo URL - check multiple possible field names & format robustly
+    String? rawPhoto =
         pickup['photo_url'] as String? ??
         pickup['pickup_photo'] as String? ??
         pickup['image'] as String? ??
@@ -1639,18 +1628,7 @@ class _RiwayatPengambilanScreenState extends State<RiwayatPengambilanScreen> {
         pickup['photo_path'] as String? ??
         pickup['image_path'] as String?;
 
-    // Jika photo URL relatif (tidak dimulai dengan http), tambahkan base URL
-    if (photoUrl != null && photoUrl.isNotEmpty) {
-      if (!photoUrl.startsWith('http')) {
-        // Hapus leading slash jika ada
-        if (photoUrl.startsWith('/')) {
-          photoUrl = photoUrl.substring(1);
-        }
-        // Tambahkan base URL
-        final baseUrl = ApiConfig.serverUrl;
-        photoUrl = '$baseUrl/$photoUrl';
-      }
-    }
+    String? photoUrl = ApiConfig.formatImageUrl(rawPhoto);
 
     appLog('📷 [DetailDialog] Original pickup data: $pickup');
     appLog('📷 [DetailDialog] Final Photo URL: $photoUrl');
@@ -1766,7 +1744,7 @@ class _RiwayatPengambilanScreenState extends State<RiwayatPengambilanScreen> {
                         const SizedBox(height: 8),
                         Builder(
                           builder: (context) {
-                            final imageUrl = photoUrl!;
+                            final imageUrl = photoUrl;
                             appLog(
                               '🖼️ [DetailDialog] Loading image from: $imageUrl',
                             );

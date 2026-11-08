@@ -25,12 +25,35 @@
             x-data="{
                 selectedProvince: '{{ old('province_id', $settings->province_id ?? '') }}',
                 selectedCity: '{{ old('configured_city_id', $settings->configured_city_id ?? '') }}',
-                cities: [],
+                cities: {{ Js::from($cities ?? []) }},
                 loadingCities: false,
-                loadCities() {
-                    if (!this.selectedProvince) {
-                        this.cities = [];
-                        this.selectedCity = '';
+                resolveProvinceId(val) {
+                    if (!val) return '';
+                    if (!isNaN(val)) return String(val);
+                    // Match province name to option value if name was passed
+                    const provSelect = document.getElementById('province_id');
+                    if (provSelect) {
+                        for (let i = 0; i < provSelect.options.length; i++) {
+                            const opt = provSelect.options[i];
+                            if (opt.text.trim().toLowerCase() === String(val).trim().toLowerCase()) {
+                                return opt.value;
+                            }
+                        }
+                    }
+                    return val;
+                },
+                loadCities(force = false) {
+                    this.selectedProvince = this.resolveProvinceId(this.selectedProvince);
+                    if (!this.selectedProvince || isNaN(this.selectedProvince)) {
+                        if (!this.selectedProvince) {
+                            this.cities = [];
+                            this.selectedCity = '';
+                        }
+                        return;
+                    }
+
+                    // If cities already pre-loaded and matches selected province, skip re-fetching
+                    if (!force && this.cities.length > 0 && String(this.cities[0].province_id) === String(this.selectedProvince)) {
                         return;
                     }
 
@@ -52,17 +75,15 @@
                                 if (savedCity) {
                                     this.selectedCity = savedCity;
                                 }
-                            }, 100);
+                            }, 50);
                         })
                         .catch(error => {
                             console.error('Error fetching cities:', error);
-                            this.cities = [];
                             this.loadingCities = false;
-                            alert('Gagal memuat data kota. Silakan coba lagi.');
                         });
                 }
             }"
-            x-init="if (selectedProvince) loadCities()">
+            x-init="selectedProvince = resolveProvinceId(selectedProvince); if (selectedProvince && (!cities || cities.length === 0)) loadCities()">
         @csrf
 
         <!-- App Configuration Section -->
@@ -232,7 +253,7 @@
                 </svg>
                 Provinsi
               </label>
-              <select name="province_id" id="province_id" x-model="selectedProvince" @change="loadCities"
+              <select name="province_id" id="province_id" x-model="selectedProvince" @change="loadCities(true)"
                       class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-3 text-gray-900 dark:text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 dark:focus:ring-emerald-800 transition-colors">
                 <option value="">🌏 Pilih Provinsi</option>
                 @foreach($provinces as $province)

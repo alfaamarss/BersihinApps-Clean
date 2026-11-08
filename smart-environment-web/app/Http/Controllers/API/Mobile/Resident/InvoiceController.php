@@ -258,6 +258,10 @@ class InvoiceController extends Controller
      */
     public function dummyPay(Request $request, string $id)
     {
+        if (!app()->environment('local', 'testing')) {
+            return $this->error('Dummy payment is disabled in production.', 403);
+        }
+
         $user = $request->user();
 
         $serviceAccountIds = $user->serviceAccounts()->pluck('id');

@@ -20,8 +20,10 @@ class DatabaseSeeder extends Seeder
             WasteSeeder::class,
             PocketSizeSeeder::class,
             WastePricingSeeder::class,
-            // AreaSeeder::class,
-            // RwSeeder::class,
+            AreaSeeder::class,
+            RwSeeder::class,
+            GarbageDumpSeeder::class,
+            ArticleSeeder::class,
             // ScheduleSeeder::class,
         ]);
 

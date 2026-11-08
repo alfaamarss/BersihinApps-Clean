@@ -23,11 +23,11 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 const bool _enableDeviceWrapper = true;
 
 void main() {
-  runApp(const SirkularApp());
+  runApp(const BeresinApp());
 }
 
-class SirkularApp extends StatelessWidget {
-  const SirkularApp({super.key});
+class BeresinApp extends StatelessWidget {
+  const BeresinApp({super.key});
 
   @override
   Widget build(BuildContext context) {

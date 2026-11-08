@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sirkular_app/config/api_config.dart';
-import 'package:sirkular_app/services/profile_service.dart';
-import 'package:sirkular_app/models/user_profile.dart';
+import 'package:beresin_app/config/api_config.dart';
+import 'package:beresin_app/services/profile_service.dart';
+import 'package:beresin_app/models/user_profile.dart';
 
 void main() {
   group('ProfileService Tests', () {

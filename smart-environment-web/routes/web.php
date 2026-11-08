@@ -153,3 +153,15 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/audit-logs', fn() => View::make('admin.audit_logs.index'))->name('admin.audit_logs.index');
     });
 });
+
+Route::get('/storage/{path}', function ($path) {
+    $filePath = storage_path('app/public/' . $path);
+    if (!file_exists($filePath)) {
+        abort(404);
+    }
+    return response()->file($filePath, [
+        'Access-Control-Allow-Origin' => '*',
+        'Access-Control-Allow-Methods' => 'GET, HEAD, OPTIONS',
+        'Access-Control-Allow-Headers' => '*',
+    ]);
+})->where('path', '.*');

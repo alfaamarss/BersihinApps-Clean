@@ -11,6 +11,11 @@ class Area extends Model
 
     protected $fillable = ['parent_id','name','level'];
 
+    public function setLevelAttribute($value)
+    {
+        $this->attributes['level'] = ucfirst(strtolower($value));
+    }
+
     public function parent()
     {
         return $this->belongsTo(Area::class, 'parent_id');

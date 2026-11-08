@@ -16,7 +16,7 @@ class OffSchedulePickupController extends Controller
 
     public function index(Request $request)
     {
-        $query = WasteDelivery::with(['serviceAccount.area', 'assignedCollector', 'invoice'])
+        $query = WasteDelivery::with(['serviceAccount.area', 'assignedCollector', 'invoice', 'wasteDeliveryItems'])
             ->where('pickup_type', 'request')
             ->latest('requested_at');
 

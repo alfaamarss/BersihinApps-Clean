@@ -37,13 +37,36 @@ class OffSchedulePickupService
                 ? Carbon::parse($payload['requested_pickup_time'])->format('H:i:s')
                 : null;
 
+            // Auto-assign collector if an assignment exists for this area or rw
+            $assignedCollectorId = null;
+            $assignment = \App\Models\CollectorAssignment::where(function($q) use ($serviceAccount) {
+                if ($serviceAccount->rw_id) {
+                    $q->where('rw_id', $serviceAccount->rw_id);
+                }
+            })->orWhereHas('schedule', function($q) use ($serviceAccount) {
+                if ($serviceAccount->area_id) {
+                    $q->where('area_id', $serviceAccount->area_id);
+                }
+            })->first();
+
+            if ($assignment && $assignment->user_id) {
+                $assignedCollectorId = $assignment->user_id;
+            } else {
+                // Fallback: pick the first active collector in the system
+                $defaultCollector = \App\Models\User::role('collector')->where('status', 'active')->first();
+                if ($defaultCollector) {
+                    $assignedCollectorId = $defaultCollector->id;
+                }
+            }
+
             // Create delivery without pricing - collector will input waste items later
             $delivery = WasteDelivery::create([
                 'service_account_id' => $serviceAccount->id,
-                'schedule_id' => null,
+                'schedule_id' => $assignment?->schedule_id,
                 'pickup_date' => $requestedPickupDate,
                 'pickup_type' => 'request',
-                'request_status' => 'sent',
+                'request_status' => $assignedCollectorId ? 'processing' : 'sent',
+                'assigned_collector_id' => $assignedCollectorId,
                 'requested_at' => now(),
                 'requested_pickup_date' => $requestedPickupDate,
                 'requested_pickup_time' => $requestedPickupTime,
@@ -342,12 +365,18 @@ class OffSchedulePickupService
 
     protected function recalculateTotals(WasteDelivery $delivery): void
     {
-        // For off-schedule pickups, pricing will be determined by collector when completing
-        // So we allow assignment without unit_price_snapshot
-        $unitPrice = $delivery->unit_price_snapshot ?? 0;
+        $itemsCount = $delivery->wasteDeliveryItems()->sum('quantity');
+        $itemsTotal = $delivery->wasteDeliveryItems()->sum('total_price');
 
-        $delivery->base_amount = $delivery->bag_count * $unitPrice;
-        $delivery->total_amount = $delivery->base_amount + $delivery->extra_fee;
+        if ($itemsCount > 0) {
+            $delivery->bag_count = $itemsCount;
+            $delivery->base_amount = $itemsTotal;
+        } else {
+            $unitPrice = $delivery->unit_price_snapshot ?? 0;
+            $delivery->base_amount = $delivery->bag_count * $unitPrice;
+        }
+
+        $delivery->total_amount = $delivery->base_amount + ($delivery->extra_fee ?? 0);
     }
 
     protected function buildScheduledAt(Carbon $date, ?string $time): ?Carbon
@@ -365,11 +394,21 @@ class OffSchedulePickupService
     {
         $prefix = 'INV';
         $date = now()->format('Ymd');
-        $lastInvoice = Invoice::whereDate('created_at', today())->latest()->first();
-        $sequence = $lastInvoice
-            ? (intval(substr($lastInvoice->invoice_number, -4)) + 1)
-            : 1;
+        
+        // Use lockForUpdate to prevent race condition when generating invoices concurrently
+        $lastInvoice = Invoice::whereDate('created_at', today())
+            ->lockForUpdate()
+            ->orderBy('id', 'desc')
+            ->first();
 
-        return $prefix . '-' . $date . '-' . str_pad($sequence, 4, '0', STR_PAD_LEFT);
+        $sequence = 1;
+        if ($lastInvoice && preg_match('/-(\d{4})(?:-\d+)?$/', $lastInvoice->invoice_number, $matches)) {
+            $sequence = intval($matches[1]) + 1;
+        } elseif ($lastInvoice) {
+            $sequence = $lastInvoice->id + 1;
+        }
+
+        $entropy = str_pad((string) random_int(100, 999), 3, '0', STR_PAD_LEFT);
+        return $prefix . '-' . $date . '-' . str_pad((string) $sequence, 4, '0', STR_PAD_LEFT) . '-' . $entropy;
     }
 }

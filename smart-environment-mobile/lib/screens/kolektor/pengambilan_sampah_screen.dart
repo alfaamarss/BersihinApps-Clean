@@ -1,4 +1,4 @@
-import 'package:sirkular_app/utils/app_log.dart';
+import 'package:beresin_app/utils/app_log.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -462,7 +462,7 @@ class _PengambilanSampahScreenState extends State<PengambilanSampahScreen>
                   TileLayer(
                     urlTemplate:
                         'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.sirkular.app',
+                    userAgentPackageName: 'com.example.beresin_app',
                     maxZoom: 19,
                   ),
                   PolylineLayer(polylines: _buildPolylines()),
@@ -605,7 +605,7 @@ class _PengambilanSampahScreenState extends State<PengambilanSampahScreen>
                     TileLayer(
                       urlTemplate:
                           'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'com.sirkular.app',
+                      userAgentPackageName: 'com.example.beresin_app',
                       maxZoom: 19,
                     ),
                     // Polyline Layer (route)

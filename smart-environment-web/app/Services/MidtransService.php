@@ -17,14 +17,26 @@ class MidtransService
     }
 
     /**
+     * Check if currently running in mock/sandbox simulator mode
+     */
+    public function isMockMode(): bool
+    {
+        $serverKey = config('midtrans.server_key');
+        if (empty($serverKey) || str_contains($serverKey, 'DUMMY') || config('midtrans.mock', false)) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Configure Midtrans settings
      */
     private function configureMidtrans(): void
     {
-        Config::$serverKey = config('midtrans.server_key');
-        Config::$isProduction = config('midtrans.is_production');
-        Config::$isSanitized = config('midtrans.is_sanitized');
-        Config::$is3ds = config('midtrans.is_3ds');
+        Config::$serverKey = config('midtrans.server_key') ?: 'SB-Mid-server-DUMMY';
+        Config::$isProduction = config('midtrans.is_production', false);
+        Config::$isSanitized = config('midtrans.is_sanitized', true);
+        Config::$is3ds = config('midtrans.is_3ds', true);
     }
 
     /**
@@ -35,6 +47,10 @@ class MidtransService
      */
     public function createTransaction(array $params): array
     {
+        if ($this->isMockMode()) {
+            return $this->createMockTransaction($params);
+        }
+
         try {
             $transaction = [
                 'transaction_details' => [
@@ -211,6 +227,55 @@ class MidtransService
     }
 
     /**
+     * Create mock transaction for sandbox testing when Midtrans keys are not set
+     */
+    private function createMockTransaction(array $params): array
+    {
+        $channel = $params['payment_channel'] ?? 'qris';
+        $orderId = $params['order_id'];
+        $amount = (int) $params['gross_amount'];
+
+        $result = [
+            'success' => true,
+            'order_id' => $orderId,
+            'transaction_id' => 'SANDBOX-' . strtoupper(uniqid()),
+            'status' => 'pending',
+            'payment_type' => $this->mapPaymentType($channel),
+            'expired_at' => now()->addMinutes($this->getExpiryMinutes($params['payment_type'] ?? 'qris'))->toIso8601String(),
+        ];
+
+        $isVA = in_array($channel, ['bca', 'bni', 'bri', 'permata', 'mandiri']) || str_ends_with($channel, '_va');
+
+        if ($isVA) {
+            $bank = str_replace('_va', '', $channel);
+            $prefix = match(strtolower($bank)) {
+                'bca' => '70012',
+                'bni' => '8808',
+                'bri' => '10777',
+                'mandiri' => '89608',
+                default => '8808',
+            };
+            // 14-digit realistic VA number
+            $vaNumber = $prefix . rand(100000000, 999999999);
+            $result['va_number'] = $vaNumber;
+            $result['bank'] = $bank;
+        } elseif ($channel === 'qris') {
+            // Standard valid EMVCo QRIS string format for mobile QrImageView
+            $result['qr_string'] = '00020101021226540014ID.LINKAJA.WWW011893600911002220743602150000000000000000303UMI51440014ID.CO.QRIS.WWW0215ID10200210000020303UMI52045499530336054' . str_pad((string)$amount, 5, '0', STR_PAD_LEFT) . '5802ID5907BERESIN6010TANGERANG61051511162070703A016304' . strtoupper(substr(md5($orderId), 0, 4));
+        } elseif (in_array($channel, ['gopay', 'shopeepay'])) {
+            $result['payment_url'] = 'https://simulator.sandbox.midtrans.com/gopay/partner/app/payment-pin?id=' . $orderId;
+        }
+
+        Log::info('Midtrans Sandbox Mock Transaction Created', [
+            'order_id' => $orderId,
+            'channel' => $channel,
+            'amount' => $amount,
+        ]);
+
+        return $result;
+    }
+
+    /**
      * Check transaction status
      * 
      * @param string $orderId
@@ -218,6 +283,21 @@ class MidtransService
      */
     public function getTransactionStatus(string $orderId): array
     {
+        if ($this->isMockMode()) {
+            $payment = \App\Models\Payment::where('order_id', $orderId)->first();
+            if ($payment) {
+                return [
+                    'success' => true,
+                    'order_id' => $orderId,
+                    'transaction_status' => $payment->status === 'success' ? 'settlement' : $payment->status,
+                    'payment_type' => $payment->payment_type ?? 'qris',
+                    'transaction_time' => $payment->created_at?->format('Y-m-d H:i:s') ?? now()->format('Y-m-d H:i:s'),
+                    'gross_amount' => $payment->amount,
+                    'fraud_status' => 'accept',
+                ];
+            }
+        }
+
         try {
             $status = Transaction::status($orderId);
             

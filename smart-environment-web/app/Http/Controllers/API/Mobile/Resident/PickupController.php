@@ -73,6 +73,18 @@ class PickupController extends Controller
 
                     'can_confirm' => $delivery->confirmation_status === 'pending',
                     'resident_note' => $delivery->resident_note,
+                    'collector_notes' => $delivery->collector_notes,
+                    'total_amount' => $delivery->total_amount,
+                    'photo_url' => $delivery->photo_url ? Storage::url($delivery->photo_url) : null,
+                    'waste_items' => $delivery->wasteDeliveryItems->map(function($item) {
+                        return [
+                            'waste_category' => $item->waste?->category ?? 'Unknown',
+                            'pocket_size' => $item->pocketSize?->name ?? null,
+                            'quantity' => $item->quantity,
+                            'unit_price' => $item->unit_price,
+                            'total_price' => $item->total_price,
+                        ];
+                    }),
                 ];
             });
 
@@ -228,8 +240,8 @@ class PickupController extends Controller
 
                 'invoice' => $delivery->invoice ? [
                     'invoice_number' => $delivery->invoice->invoice_number,
-                    'invoice_date' => $delivery->invoice->invoice_date->format('Y-m-d'),
-                    'due_date' => $delivery->invoice->due_date->format('Y-m-d'),
+                    'invoice_date' => ($delivery->invoice->issued_at ?? $delivery->invoice->created_at)?->format('Y-m-d'),
+                    'due_date' => $delivery->invoice->va_expiry_at?->format('Y-m-d'),
                     'total_amount' => $delivery->invoice->total_amount,
                     'status' => $delivery->invoice->status,
                 ] : null,
@@ -287,11 +299,17 @@ class PickupController extends Controller
                 ], 400);
             }
 
-            $delivery->update([
+            $updateData = [
                 'confirmation_status' => $validated['confirmation_status'],
                 'confirmed_at' => now(),
                 'resident_note' => $validated['resident_note'] ?? null,
-            ]);
+            ];
+
+            if ($validated['confirmation_status'] === 'no_waste') {
+                $updateData['status'] = 'skipped';
+            }
+
+            $delivery->update($updateData);
 
             return response()->json([
                 'success' => true,

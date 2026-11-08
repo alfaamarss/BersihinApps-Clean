@@ -109,7 +109,7 @@ Route::prefix('v1')->group(function () {
                 ]);
 
             // Collector-specific routes
-            Route::prefix('collector')->group(function () {
+            Route::prefix('collector')->middleware('role:collector|admin,sanctum')->group(function () {
                 Route::get('/dashboard', CollectorDashboardController::class);
                 Route::get('/schedules', [CollectorScheduleController::class, 'index']);
                 Route::get('/schedules/deliveries', [CollectorScheduleController::class, 'deliveries']);
@@ -156,7 +156,13 @@ Route::prefix('v1')->group(function () {
             });
 
             // Resident-specific routes
-            Route::prefix('resident')->group(function () {
+            Route::prefix('resident')->middleware('role:warga|resident|admin,sanctum')->group(function () {
+                // Aliases for resident convenience & contract backward-compatibility
+                Route::get('/dashboard', MobileDashboardController::class);
+                Route::get('/service-accounts', [MobileServiceAccountsController::class, 'index']);
+                Route::get('/notifications', [NotificationsController::class, 'index']);
+                Route::get('/notifications/unread-count', [NotificationsController::class, 'unreadCount']);
+
                 // Waste Deliveries
                 Route::get('/waste-deliveries', [ResidentWasteDeliveryController::class, 'index']);
                 Route::get('/waste-deliveries/{id}', [ResidentWasteDeliveryController::class, 'show']);
@@ -213,6 +219,7 @@ Route::prefix('v1')->group(function () {
                 Route::get('/payments/pending', [ResidentPaymentController::class, 'getPendingPayments']);
                 Route::post('/payments/create', [ResidentPaymentController::class, 'createPayment']);
                 Route::post('/payments/{orderId}/cancel', [ResidentPaymentController::class, 'cancelPayment']);
+                Route::post('/payments/{orderId}/simulate-pay', [ResidentPaymentController::class, 'simulatePay']);
                 Route::get('/payments/{orderId}', [ResidentPaymentController::class, 'getPaymentDetail']);
                 Route::get('/payments/{orderId}/status', [ResidentPaymentController::class, 'checkPaymentStatus']);
             });
@@ -235,7 +242,7 @@ Route::prefix('v1')->group(function () {
         Route::apiResource('waste-delivery-items', WasteDeliveryItemsController::class)->parameters(['waste-delivery-items' => 'id']);
         Route::apiResource('garbage-dumps', GarbageDumpsController::class)->parameters(['garbage-dumps' => 'id']);
         Route::apiResource('invoices', InvoicesController::class)->parameters(['invoices' => 'id']);
-        Route::post('invoices/{id}/confirm-payment', [InvoicesController::class, 'confirmPayment']);
+        Route::post('invoices/{id}/confirm-payment', [InvoicesController::class, 'confirmPayment'])->middleware('role:admin');
         Route::get('invoices/{id}/va-status', [InvoicesController::class, 'checkVAStatus']);
         Route::apiResource('payments', PaymentsController::class)->parameters(['payments' => 'id']);
         Route::apiResource('complaints', ComplaintsController::class)->parameters(['complaints' => 'id']);

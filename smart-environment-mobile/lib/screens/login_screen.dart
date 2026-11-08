@@ -109,7 +109,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 child: Center(
                   child: Image.asset(
-                    'assets/images/sirkular.png',
+                    'assets/images/beresin.png',
+                    filterQuality: FilterQuality.high,
                     width: 80,
                     height: 80,
                     fit: BoxFit.contain,

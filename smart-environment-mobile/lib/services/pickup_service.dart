@@ -1,4 +1,4 @@
-import 'package:sirkular_app/utils/app_log.dart';
+import 'package:beresin_app/utils/app_log.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
 import 'dart:convert';
@@ -304,9 +304,10 @@ class PickupService {
             return {
               'id': item['id'],
               'idPengambilan': 'no ${item['id']}',
+              'pickup_type': item['pickup_type'] ?? 'regular',
               'name':
-                  houseInfo?['account_number'] ??
                   houseInfo?['resident_name'] ??
+                  houseInfo?['account_number'] ??
                   'N/A',
               'address': houseInfo?['address'] ?? 'N/A',
               'totalPrice': item['total_amount'] ?? 0,
@@ -316,6 +317,7 @@ class PickupService {
               'status': item['status'] ?? '',
               'items': transformedItems, // Use 'items' key for compatibility
               'notes': item['collector_notes'] ?? '',
+              'resident_note': item['resident_note'] ?? '',
             };
           }).toList();
 

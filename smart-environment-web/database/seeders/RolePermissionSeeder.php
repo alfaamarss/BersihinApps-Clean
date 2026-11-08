@@ -72,6 +72,7 @@ class RolePermissionSeeder extends Seeder
             $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => $guard]);
             $collectorRole = Role::firstOrCreate(['name' => 'collector', 'guard_name' => $guard]);
             $userRole = Role::firstOrCreate(['name' => 'warga', 'guard_name' => $guard]);
+            $residentRole = Role::firstOrCreate(['name' => 'resident', 'guard_name' => $guard]);
 
             // Admin has all permissions in each guard
             $adminRole->syncPermissions(Permission::where('guard_name', $guard)->pluck('name')->toArray());

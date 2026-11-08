@@ -19,7 +19,7 @@
             token: null,
         };
     </script>
-    <link href="{{ asset('assets/images/logo/sirkular.png') }}" rel="icon">
+    <link href="{{ asset('assets/images/logo/beresin-icon.png') }}" rel="icon">
     @stack('styles')
     @stack('head:after')
 </head>

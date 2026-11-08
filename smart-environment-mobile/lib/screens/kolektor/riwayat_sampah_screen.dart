@@ -398,13 +398,15 @@ class RiwayatSampahScreen extends StatelessWidget {
   /// Get pickup type label
   String _getPickupTypeLabel() {
     // Check if it's a complaint
-    if (pickupData.containsKey('type') && pickupData['type'] != null) {
+    final pickupType = pickupData['pickup_type']?.toString().toLowerCase();
+    if ((pickupData.containsKey('type') && pickupData['type'] != null) || pickupType == 'complaint') {
       return 'Tugas Pengaduan';
     }
 
     // Check if it's off-schedule (request)
-    final pickupType = pickupData['pickup_type'];
-    if (pickupType == 'off-schedule') {
+    if (pickupType == 'off-schedule' ||
+        pickupType == 'off_schedule' ||
+        pickupType == 'request') {
       return 'Request Pengambilan';
     }
 
@@ -415,13 +417,15 @@ class RiwayatSampahScreen extends StatelessWidget {
   /// Get pickup type color
   Color _getPickupTypeColor() {
     // Check if it's a complaint
-    if (pickupData.containsKey('type') && pickupData['type'] != null) {
+    final pickupType = pickupData['pickup_type']?.toString().toLowerCase();
+    if ((pickupData.containsKey('type') && pickupData['type'] != null) || pickupType == 'complaint') {
       return Colors.red; // Merah untuk pelaporan
     }
 
     // Check if it's off-schedule (request)
-    final pickupType = pickupData['pickup_type'];
-    if (pickupType == 'off-schedule') {
+    if (pickupType == 'off-schedule' ||
+        pickupType == 'off_schedule' ||
+        pickupType == 'request') {
       return Colors.orange; // Orange untuk request
     }
 

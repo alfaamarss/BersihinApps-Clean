@@ -78,14 +78,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   color: Colors.white,
                   shape: BoxShape.circle,
                 ),
-                child: ClipOval(
+                child: Padding(
+                  padding: const EdgeInsets.all(6.0),
                   child: Image.asset(
-                    'assets/images/sirkular.png',
-                    fit: BoxFit.cover,
+                    'assets/images/beresin.png',
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.high,
                   ),
                 ),
               ),
-
               const SizedBox(height: 30),
               Text(
                 "Registrasi Akun",

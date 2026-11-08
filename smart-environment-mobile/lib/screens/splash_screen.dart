@@ -1,4 +1,4 @@
-import 'package:sirkular_app/utils/app_log.dart';
+import 'package:beresin_app/utils/app_log.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -296,8 +296,8 @@ class _SplashScreenState extends State<SplashScreen>
                       children: [
                         // Logo PNG
                         Container(
-                          width: 90,
-                          height: 90,
+                          width: 100,
+                          height: 100,
                           decoration: const BoxDecoration(
                             color: Colors.white,
                             shape: BoxShape.circle,
@@ -309,19 +309,20 @@ class _SplashScreenState extends State<SplashScreen>
                               ),
                             ],
                           ),
-                          child: ClipOval(
+                          child: Padding(
+                            padding: const EdgeInsets.all(6.0),
                             child: Image.asset(
-                              'assets/images/sirkular.png',
-                              fit: BoxFit.cover,
+                              'assets/images/beresin.png',
+                              fit: BoxFit.contain,
+                              filterQuality: FilterQuality.high,
                             ),
                           ),
                         ),
-
                         const SizedBox(height: 20),
 
                         // Judul
                         Text(
-                          "SIRKULAR",
+                          "BERESIN",
                           style: GoogleFonts.poppins(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,

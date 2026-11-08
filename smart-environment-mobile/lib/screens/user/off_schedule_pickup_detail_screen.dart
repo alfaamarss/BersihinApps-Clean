@@ -1,4 +1,4 @@
-import 'package:sirkular_app/utils/app_log.dart';
+import 'package:beresin_app/utils/app_log.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -307,15 +307,7 @@ class _OffSchedulePickupDetailScreenState
 
   // Helper function to get full photo URL
   String _getFullPhotoUrl(String photoUrl) {
-    if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
-      return photoUrl;
-    }
-    // Add base URL for relative paths
-    final baseUrl = ApiConfig.serverUrl;
-    if (photoUrl.startsWith('/')) {
-      return '$baseUrl$photoUrl';
-    }
-    return '$baseUrl/$photoUrl';
+    return ApiConfig.formatImageUrl(photoUrl) ?? photoUrl;
   }
 
   // Build status stepper widget with timestamps like complaint detail

@@ -60,9 +60,63 @@ class PickupController extends Controller
             //     $q->where('status', 'active');
             // })
             ->where('pickup_date', today())
-            ->whereNotIn('status', ['completed', 'cancelled'])
-            ->get()
-            ->map(function($delivery) use ($request) {
+            ->whereNotIn('status', ['completed', 'cancelled', 'skipped'])
+            ->whereNotIn('confirmation_status', ['no_waste', 'skipped'])
+            ->get();
+
+            // On-demand fallback: Jika belum ada delivery hari ini, generate otomatis dari schedule collector
+            if ($pickups->isEmpty()) {
+                try {
+                    $generator = app(\App\Services\WasteDeliveryGeneratorService::class);
+                    $assignments = \App\Models\CollectorAssignment::with('schedule')
+                        ->where('user_id', $collector->id)
+                        ->where('start_date', '<=', now())
+                        ->where(function($q) {
+                            $q->whereNull('end_date')->orWhere('end_date', '>=', now());
+                        })
+                        ->get();
+
+                    $generatedAny = false;
+                    foreach ($assignments as $assignment) {
+                        if ($assignment->schedule && $assignment->schedule->is_active) {
+                            $count = $generator->generateForSchedule($assignment->schedule, 1);
+                            if ($count > 0) {
+                                $generatedAny = true;
+                            }
+                        }
+                    }
+
+                    if ($generatedAny) {
+                        $pickups = WasteDelivery::with([
+                            'serviceAccount.user',
+                            'serviceAccount.area',
+                            'serviceAccount.rw',
+                            'schedule',
+                            'wasteDeliveryItems.waste',
+                            'wasteDeliveryItems.pocketSize'
+                        ])
+                        ->whereNotNull('schedule_id')
+                        ->whereHas('schedule', function($q) {
+                            $q->whereNotNull('id');
+                        })
+                        ->whereHas('schedule.collectorAssignments', function($q) use ($collector) {
+                            $q->where('user_id', $collector->id)
+                              ->where('start_date', '<=', now())
+                              ->where(function($q) {
+                                  $q->whereNull('end_date')->orWhere('end_date', '>=', now());
+                              });
+                        })
+                        ->where('pickup_date', today())
+                        ->whereNotIn('status', ['completed', 'cancelled', 'skipped'])
+                        ->whereNotIn('confirmation_status', ['no_waste', 'skipped'])
+                        ->get();
+                    }
+                } catch (\Exception $e) {
+                    Log::warning("On-demand delivery generation fallback error: " . $e->getMessage());
+                }
+            }
+
+            $results = $pickups->map(function($delivery) use ($request) {
                 // Safety check untuk relasi
                 if (!$delivery->serviceAccount || !$delivery->schedule) {
                     Log::warning("Delivery {$delivery->id} missing serviceAccount or schedule");
@@ -83,6 +137,15 @@ class PickupController extends Controller
                     'rw' => optional($delivery->serviceAccount->rw)->name,
                     'latitude' => $delivery->serviceAccount->latitude ?? 0,
                     'longitude' => $delivery->serviceAccount->longitude ?? 0,
+                ],
+                'service_account' => [
+                    'id' => $delivery->serviceAccount->id,
+                    'name' => $delivery->serviceAccount->name,
+                    'account_number' => $delivery->serviceAccount->account_number ?? $delivery->serviceAccount->name,
+                    'address' => $delivery->serviceAccount->address,
+                    'contact_phone' => $delivery->serviceAccount->contact_phone,
+                    'latitude' => $delivery->serviceAccount->latitude,
+                    'longitude' => $delivery->serviceAccount->longitude,
                 ],
 
                 'status' => $delivery->status,
@@ -122,7 +185,7 @@ class PickupController extends Controller
             return response()->json([
                 'success' => true,
                 'summary' => $summary,
-                'items' => $pickups,
+                'items' => $results,
             ]);
             
         } catch (\Exception $e) {
@@ -216,7 +279,7 @@ class PickupController extends Controller
                 'confirmation_status' => $delivery->confirmation_status,
                 'resident_note' => $delivery->resident_note,
                 'collector_notes' => $delivery->collector_notes,
-                'photo_url' => $delivery->photo_url,
+                'photo_url' => $delivery->photo_url ? Storage::url($delivery->photo_url) : null,
 
                 'history' => $history,
             ],
@@ -315,6 +378,7 @@ class PickupController extends Controller
             $delivery->wasteDeliveryItems()->delete(); // Clear existing items
 
             $totalAmount = 0;
+            $totalBagCount = 0;
             foreach ($validated['waste_items'] as $item) {
                 // Get current pricing
                 $pricing = WastePricing::where('waste_id', $item['waste_id'])
@@ -338,10 +402,16 @@ class PickupController extends Controller
                 ]);
 
                 $totalAmount += $itemTotal;
+                $totalBagCount += (int) $item['quantity'];
             }
 
-            // Update total amount
-            $delivery->update(['total_amount' => $totalAmount]);
+            // Update total amount, base amount, and bag count
+            $extraFee = (float) ($delivery->extra_fee ?? 0);
+            $delivery->update([
+                'bag_count' => $totalBagCount,
+                'base_amount' => $totalAmount,
+                'total_amount' => $totalAmount + $extraFee,
+            ]);
 
             // Generate invoice
             $invoice = $delivery->invoice()->create([
@@ -445,14 +515,24 @@ class PickupController extends Controller
     /**
      * Helper: Generate invoice number
      */
-    private function generateInvoiceNumber()
+    private function generateInvoiceNumber(): string
     {
         $prefix = 'INV';
-        $date = date('Ymd');
-        $lastInvoice = Invoice::whereDate('created_at', today())->latest()->first();
-        $sequence = $lastInvoice ? (intval(substr($lastInvoice->invoice_number, -4)) + 1) : 1;
+        $date = now()->format('Ymd');
+        $lastInvoice = Invoice::whereDate('created_at', today())
+            ->lockForUpdate()
+            ->orderBy('id', 'desc')
+            ->first();
 
-        return $prefix . '-' . $date . '-' . str_pad($sequence, 4, '0', STR_PAD_LEFT);
+        $sequence = 1;
+        if ($lastInvoice && preg_match('/-(\d{4})(?:-\d+)?$/', $lastInvoice->invoice_number, $matches)) {
+            $sequence = intval($matches[1]) + 1;
+        } elseif ($lastInvoice) {
+            $sequence = $lastInvoice->id + 1;
+        }
+
+        $entropy = str_pad((string) random_int(100, 999), 3, '0', STR_PAD_LEFT);
+        return $prefix . '-' . $date . '-' . str_pad((string) $sequence, 4, '0', STR_PAD_LEFT) . '-' . $entropy;
     }
 
     /**
@@ -476,7 +556,7 @@ class PickupController extends Controller
 
             Log::info("Fetching pickup history for collector {$collector->id}, limit: {$limit}");
 
-            // Get completed pickups untuk collector ini
+            // Get completed pickups untuk collector ini (baik reguler maupun off-schedule)
             $pickups = WasteDelivery::with([
                 'serviceAccount.user',
                 'serviceAccount.area',
@@ -484,23 +564,41 @@ class PickupController extends Controller
                 'wasteDeliveryItems.waste',
                 'wasteDeliveryItems.pocketSize'
             ])
-            ->whereNotNull('schedule_id')
+            ->where(function($q) use ($collector) {
+                // Pickup terjadwal reguler
+                $q->where(function($sub) use ($collector) {
+                    $sub->whereNotNull('schedule_id')
+                        ->whereHas('schedule.collectorAssignments', function($a) use ($collector) {
+                            $a->where('user_id', $collector->id);
+                        });
+                })
+                // ATAU pickup luar jadwal (request) yang ditugaskan ke kolektor ini
+                ->orWhere(function($sub) use ($collector) {
+                    $sub->where('pickup_type', 'request')
+                        ->where('assigned_collector_id', $collector->id);
+                });
+            })
             ->whereIn('status', ['collected', 'completed'])
-            ->orderBy('pickup_date', 'desc')
-            ->limit($limit * 2) // Ambil lebih banyak untuk filtering
+            ->orderByRaw('COALESCE(collected_at, pickup_date, requested_pickup_date, created_at) DESC')
+            ->limit($limit)
             ->get()
             ->filter(function($delivery) use ($collector) {
-                // Safety check
-                if (!$delivery->serviceAccount || !$delivery->schedule) {
-                    Log::warning("Delivery {$delivery->id} in history missing serviceAccount or schedule");
+                if (!$delivery->serviceAccount) {
+                    Log::warning("Delivery {$delivery->id} in history missing serviceAccount");
                     return false;
+                }
+
+                // Jika off-schedule / request
+                if ($delivery->pickup_type === 'request' || !$delivery->schedule_id) {
+                    return $delivery->assigned_collector_id == $collector->id;
                 }
                 
                 // Check apakah ada assignment untuk collector ini pada tanggal pickup
-                $hasAssignment = $delivery->schedule->collectorAssignments
+                $hasAssignment = $delivery->schedule?->collectorAssignments
                     ->where('user_id', $collector->id)
                     ->filter(function($assignment) use ($delivery) {
                         $pickupDate = $delivery->pickup_date;
+                        if (!$pickupDate) return true;
                         $startDate = \Carbon\Carbon::parse($assignment->start_date);
                         $endDate = $assignment->end_date ? \Carbon\Carbon::parse($assignment->end_date) : null;
                         
@@ -512,7 +610,7 @@ class PickupController extends Controller
                     })
                     ->isNotEmpty();
                 
-                return $hasAssignment;
+                return $hasAssignment ?? false;
             })
             ->take($limit)
             ->map(function($delivery) {
@@ -526,11 +624,14 @@ class PickupController extends Controller
                 ];
             });
 
+            $effectiveDate = $delivery->pickup_date ?? $delivery->requested_pickup_date;
+
             return [
                 'id' => $delivery->id,
                 'service_account_id' => $delivery->service_account_id,
-                'pickup_date' => $delivery->pickup_date ? $delivery->pickup_date->format('Y-m-d') : null,
-                'day_name' => $delivery->pickup_date ? $this->getDayName($delivery->pickup_date->dayOfWeek) : null,
+                'pickup_date' => $effectiveDate ? $effectiveDate->format('Y-m-d') : null,
+                'day_name' => $effectiveDate ? $this->getDayName($effectiveDate->dayOfWeek) : null,
+                'pickup_type' => $delivery->pickup_type ?? 'scheduled',
 
                 'house_info' => [
                     'account_number' => $delivery->serviceAccount->name ?? 'N/A',

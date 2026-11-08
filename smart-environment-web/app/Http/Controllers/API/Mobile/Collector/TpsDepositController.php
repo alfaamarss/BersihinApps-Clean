@@ -14,41 +14,45 @@ class TpsDepositController extends Controller
     use ApiResponse;
 
     /**
-     * Get list of TPS assigned to current collector
+     * Get list of TPS available for current collector
      */
     public function getAvailableTps(Request $request)
     {
         $collector = $request->user();
         
-        // Get TPS that are assigned to this collector and active
-        $tpsList = $collector->assignedTps()
-            ->where('status', 'active')
+        // Ambil semua TPS & TPA yang aktif
+        $allTps = GarbageDump::where('status', 'active')
             ->with(['kecamatan', 'kelurahan', 'rw'])
-            ->get()
-            ->map(function ($tps) {
-                return [
-                    'id' => $tps->id,
-                    'name' => $tps->name,
-                    'address' => $tps->address,
-                    'latitude' => $tps->latitude,
-                    'longitude' => $tps->longitude,
-                    'capacity_volume' => $tps->capacity_volume,
-                    'capacity_weight' => $tps->capacity_weight,
-                    'status' => $tps->status,
-                    'kecamatan' => $tps->kecamatan ? [
-                        'id' => $tps->kecamatan->id,
-                        'name' => $tps->kecamatan->name,
-                    ] : null,
-                    'kelurahan' => $tps->kelurahan ? [
-                        'id' => $tps->kelurahan->id,
-                        'name' => $tps->kelurahan->name,
-                    ] : null,
-                    'rw' => $tps->rw ? [
-                        'id' => $tps->rw->id,
-                        'name' => $tps->rw->name,
-                    ] : null,
-                ];
-            });
+            ->orderBy('name')
+            ->get();
+
+        $assignedIds = $collector->assignedTps()->pluck('garbage_dumps.id')->toArray();
+
+        $tpsList = $allTps->map(function ($tps) use ($assignedIds) {
+            return [
+                'id' => $tps->id,
+                'name' => $tps->name,
+                'address' => $tps->address,
+                'latitude' => $tps->latitude,
+                'longitude' => $tps->longitude,
+                'capacity_volume' => $tps->capacity_volume,
+                'capacity_weight' => $tps->capacity_weight,
+                'status' => $tps->status,
+                'is_assigned' => empty($assignedIds) || in_array($tps->id, $assignedIds),
+                'kecamatan' => $tps->kecamatan ? [
+                    'id' => $tps->kecamatan->id,
+                    'name' => $tps->kecamatan->name,
+                ] : null,
+                'kelurahan' => $tps->kelurahan ? [
+                    'id' => $tps->kelurahan->id,
+                    'name' => $tps->kelurahan->name,
+                ] : null,
+                'rw' => $tps->rw ? [
+                    'id' => $tps->rw->id,
+                    'name' => $tps->rw->name,
+                ] : null,
+            ];
+        });
 
         return $this->ok([
             'tps_list' => $tpsList,
@@ -88,12 +92,10 @@ class TpsDepositController extends Controller
             ]);
         }
 
-        // Check if collector is assigned to this TPS
+        // Check if collector is assigned to this TPS (for logging / audit)
         $isAssigned = $collector->assignedTps()->where('garbage_dumps.id', $tps->id)->exists();
         if (!$isAssigned) {
-            return $this->error('Anda tidak di-assign ke TPS ini', 403, [
-                'garbage_dump_id' => ['Anda tidak memiliki izin untuk setor ke TPS ini']
-            ]);
+            \Illuminate\Support\Facades\Log::info("Collector {$collector->id} deposited to non-assigned active TPS {$tps->id} ({$tps->name})");
         }
 
         $deposit = TpsDeposit::create([

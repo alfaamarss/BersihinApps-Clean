@@ -25,11 +25,19 @@ class OffSchedulePickupController extends Controller
 
         $query = WasteDelivery::with(['serviceAccount.area', 'serviceAccount.user'])
             ->where('pickup_type', 'request')
-            ->where('assigned_collector_id', $collector->id)
+            ->where(function ($q) use ($collector) {
+                $q->where('assigned_collector_id', $collector->id)
+                  ->orWhereNull('assigned_collector_id');
+            })
+            ->whereNotIn('status', ['cancelled'])
             ->orderByDesc('requested_at');
 
         if ($status = $request->input('status')) {
-            $query->where('request_status', $status);
+            if ($status === 'pending') {
+                $query->whereIn('request_status', ['pending', 'sent', 'processing']);
+            } else {
+                $query->where('request_status', $status);
+            }
         }
 
         $pickups = $query->paginate($request->input('per_page', 15));
@@ -116,6 +124,7 @@ class OffSchedulePickupController extends Controller
 
             // Update delivery
             $delivery->update([
+                'assigned_collector_id' => $delivery->assigned_collector_id ?? $request->user()->id,
                 'bag_count' => $totalBagCount,
                 'base_amount' => $baseAmount,
                 'extra_fee' => $surcharge,
@@ -170,7 +179,10 @@ class OffSchedulePickupController extends Controller
     {
         return WasteDelivery::where('pickup_type', 'request')
             ->where('id', $deliveryId)
-            ->where('assigned_collector_id', $collectorId)
+            ->where(function ($q) use ($collectorId) {
+                $q->where('assigned_collector_id', $collectorId)
+                  ->orWhereNull('assigned_collector_id');
+            })
             ->firstOrFail();
     }
 

@@ -1,4 +1,4 @@
-import 'package:sirkular_app/utils/app_log.dart';
+import 'package:beresin_app/utils/app_log.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -545,6 +545,138 @@ class _TambahAkunLayananScreenState extends State<TambahAkunLayananScreen> {
 
     await _searchAddress(
       '${option.name}, ${_selectedKecamatanOption?.name ?? ''}, ${_cityName ?? ''}, ${_provinceName ?? ''}',
+    );
+  }
+
+  void _showKecamatanPicker() {
+    if (_kecamatanOptions.isEmpty) {
+      _showSnackBar('Data kecamatan belum tersedia atau sedang dimuat');
+      return;
+    }
+    _showAreaPickerBottomSheet(
+      title: 'Pilih Kecamatan',
+      options: _kecamatanOptions,
+      onSelected: (option) {
+        _handleKecamatanSelection(option.name);
+      },
+    );
+  }
+
+  void _showKelurahanPicker() {
+    if (_selectedKecamatanOption == null) {
+      _showSnackBar('Silakan pilih kecamatan terlebih dahulu');
+      return;
+    }
+    if (_isKelurahanLoading) {
+      _showSnackBar('Sedang memuat data kelurahan...');
+      return;
+    }
+    if (_kelurahanOptions.isEmpty) {
+      _showSnackBar('Tidak ada kelurahan untuk kecamatan ${_selectedKecamatanOption?.name ?? ''}');
+      return;
+    }
+    _showAreaPickerBottomSheet(
+      title: 'Pilih Kelurahan',
+      options: _kelurahanOptions,
+      onSelected: (option) {
+        _handleKelurahanSelection(option.name);
+      },
+    );
+  }
+
+  void _showAreaPickerBottomSheet({
+    required String title,
+    required List<AreaOption> options,
+    required Function(AreaOption) onSelected,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        String filter = '';
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final filtered = options
+                .where((o) => o.name.toLowerCase().contains(filter.toLowerCase()))
+                .toList();
+            return SafeArea(
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.65,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          title,
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      decoration: InputDecoration(
+                        hintText: 'Cari...',
+                        hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
+                        prefixIcon: const Icon(Icons.search),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onChanged: (val) {
+                        setModalState(() {
+                          filter = val;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    Expanded(
+                      child: filtered.isEmpty
+                          ? Center(
+                              child: Text(
+                                'Tidak ditemukan',
+                                style: GoogleFonts.poppins(color: Colors.grey),
+                              ),
+                            )
+                          : ListView.separated(
+                              itemCount: filtered.length,
+                              separatorBuilder: (_, __) => const Divider(height: 1),
+                              itemBuilder: (context, index) {
+                                final item = filtered[index];
+                                return ListTile(
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  title: Text(
+                                    item.name,
+                                    style: GoogleFonts.poppins(fontSize: 15),
+                                  ),
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    onSelected(item);
+                                  },
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -1458,99 +1590,54 @@ class _TambahAkunLayananScreenState extends State<TambahAkunLayananScreen> {
               ),
               const SizedBox(height: 16),
               _buildLabel('Kecamatan'),
-              Autocomplete<String>(
-                optionsBuilder: (TextEditingValue textEditingValue) {
-                  final query = textEditingValue.text.toLowerCase();
-                  final names = _kecamatanOptions
-                      .map((option) => option.name)
-                      .toList();
-                  if (query.isEmpty) {
-                    return names;
-                  }
-                  return names.where(
-                    (name) => name.toLowerCase().contains(query),
-                  );
-                },
-                onSelected: _handleKecamatanSelection,
-                fieldViewBuilder:
-                    (context, textController, focusNode, onEditingComplete) {
-                      if (textController.text != _kecamatanController.text) {
-                        textController.value = _kecamatanController.value;
-                      }
-                      return TextFormField(
-                        controller: textController,
-                        focusNode: focusNode,
-                        decoration: _inputDecoration(
-                          hintText: 'Pilih atau ketik kecamatan',
-                        ),
-                        validator: (value) => value == null || value.isEmpty
-                            ? 'Kecamatan wajib diisi'
-                            : null,
-                        onEditingComplete: () {
-                          onEditingComplete();
-                          _handleKecamatanSelection(textController.text);
-                        },
-                        onChanged: (value) {
-                          _kecamatanController.text = value;
-                        },
-                      );
-                    },
+              InkWell(
+                onTap: _showKecamatanPicker,
+                borderRadius: BorderRadius.circular(10),
+                child: IgnorePointer(
+                  child: TextFormField(
+                    controller: _kecamatanController,
+                    decoration: _inputDecoration(
+                      hintText: 'Pilih kecamatan',
+                    ).copyWith(
+                      suffixIcon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                    ),
+                    validator: (value) =>
+                        value == null || value.trim().isEmpty ? 'Kecamatan wajib diisi' : null,
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
               _buildLabel('Kelurahan'),
               Column(
                 children: [
-                  Autocomplete<String>(
-                    optionsBuilder: (TextEditingValue textEditingValue) {
-                      if (_selectedKecamatanOption == null) {
-                        return const Iterable<String>.empty();
-                      }
-                      final query = textEditingValue.text.toLowerCase();
-                      final names = _kelurahanOptions
-                          .map((option) => option.name)
-                          .toList();
-                      if (query.isEmpty) {
-                        return names;
-                      }
-                      return names.where(
-                        (name) => name.toLowerCase().contains(query),
-                      );
-                    },
-                    onSelected: _handleKelurahanSelection,
-                    fieldViewBuilder:
-                        (
-                          context,
-                          textController,
-                          focusNode,
-                          onEditingComplete,
-                        ) {
-                          if (textController.text !=
-                              _kelurahanController.text) {
-                            textController.value = _kelurahanController.value;
-                          }
-                          return TextFormField(
-                            controller: textController,
-                            focusNode: focusNode,
-                            enabled:
-                                _selectedKecamatanOption != null &&
-                                !_isKelurahanLoading,
-                            decoration: _inputDecoration(
-                              hintText: _selectedKecamatanOption == null
-                                  ? 'Pilih kecamatan terlebih dahulu'
-                                  : 'Pilih kelurahan',
-                            ),
-                            validator: (value) => value == null || value.isEmpty
-                                ? 'Kelurahan wajib diisi'
-                                : null,
-                            onEditingComplete: () {
-                              onEditingComplete();
-                              _handleKelurahanSelection(textController.text);
-                            },
-                            onChanged: (value) {
-                              _kelurahanController.text = value;
-                            },
-                          );
-                        },
+                  InkWell(
+                    onTap: _showKelurahanPicker,
+                    borderRadius: BorderRadius.circular(10),
+                    child: IgnorePointer(
+                      child: TextFormField(
+                        controller: _kelurahanController,
+                        decoration: _inputDecoration(
+                          hintText: _selectedKecamatanOption == null
+                              ? 'Pilih kecamatan terlebih dahulu'
+                              : (_isKelurahanLoading
+                                  ? 'Memuat kelurahan...'
+                                  : 'Pilih kelurahan'),
+                        ).copyWith(
+                          suffixIcon: _isKelurahanLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: Padding(
+                                    padding: EdgeInsets.all(12),
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  ),
+                                )
+                              : const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                        ),
+                        validator: (value) =>
+                            value == null || value.trim().isEmpty ? 'Kelurahan wajib diisi' : null,
+                      ),
+                    ),
                   ),
                   if (_isKelurahanLoading)
                     const Padding(

@@ -16,23 +16,17 @@
     <a href="{{ route('home') }}" class="flex items-center gap-3">
       <span class="logo" :class="sidebarToggle ? 'hidden' : ''">
         @if($resolvedLogo)
-          <img class="h-12 w-auto max-w-[120px] object-contain" src="{{ $resolvedLogo }}" alt="{{ $appSettings->app_name }}" />
+          <img class="h-11 w-auto max-w-[190px] object-contain" src="{{ $resolvedLogo }}" alt="{{ $appSettings->app_name }}" />
         @else
-          <img class="dark:hidden h-12 w-auto object-contain" src="{{ asset('assets/images/logo/sirkular.png') }}" alt="Logo" />
-          <img class="hidden dark:block h-12 w-auto object-contain" src="{{ asset('assets/images/logo/sirkular.png') }}" alt="Logo" />
+          <img class="dark:hidden h-11 w-auto max-w-[190px] object-contain" src="{{ asset('assets/images/logo/beresin.png') }}" alt="Beresin" />
+          <img class="hidden dark:block h-11 w-auto max-w-[190px] object-contain" src="{{ asset('assets/images/logo/beresin-dark.png') }}" alt="Beresin" />
         @endif
       </span>
 
-      <img class="logo-icon h-12 w-12 object-contain"
+      <img class="logo-icon h-10 w-10 object-contain"
            :class="sidebarToggle ? 'lg:block' : 'hidden'"
-           src="{{ $resolvedLogo ?? asset('assets/images/logo/sirkular.png') }}"
-           alt="{{ isset($appSettings) ? $appSettings->app_name : config('app.name', 'Bersihin') }}" />
-
-      <span class="app-name font-semibold text-3xl text-gray-800 dark:text-white truncate max-w-[160px]"
-            :class="sidebarToggle ? 'lg:hidden' : ''"
-            title="{{ isset($appSettings) ? $appSettings->app_name : config('app.name', 'Bersihin') }}">
-        {{ isset($appSettings) ? $appSettings->app_name : config('app.name', 'Bersihin') }}
-      </span>
+           src="{{ asset('assets/images/logo/beresin-icon.png') }}"
+           alt="{{ isset($appSettings) ? $appSettings->app_name : 'Beresin' }}" />
     </a>
   </div>
 

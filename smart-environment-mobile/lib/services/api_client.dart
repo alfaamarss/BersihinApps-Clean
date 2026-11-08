@@ -1,4 +1,4 @@
-import 'package:sirkular_app/utils/app_log.dart';
+import 'package:beresin_app/utils/app_log.dart';
 import 'package:dio/dio.dart';
 import '../config/api_config.dart';
 import '../main.dart' show navigatorKey;
@@ -20,6 +20,16 @@ class ApiClient {
         },
       ),
     );
+
+    _dio.interceptors.add(LogInterceptor(
+      request: true,
+      requestHeader: false,
+      requestBody: true,
+      responseHeader: false,
+      responseBody: true,
+      error: true,
+      logPrint: (obj) => appLog('[API-DEBUG] $obj'),
+    ));
 
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {

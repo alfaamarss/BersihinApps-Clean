@@ -18,14 +18,44 @@ class AppSettingsController extends Controller
     public function index()
     {
         $settings = AppSetting::first() ?? new AppSetting;
-        $provinces = Http::get('https://www.emsifa.com/api-wilayah-indonesia/api/provinces.json')->json();
+        $provinces = cache()->remember('emsifa_provinces', 86400, function () {
+            try {
+                $response = Http::timeout(6)->get('https://www.emsifa.com/api-wilayah-indonesia/api/provinces.json');
+                return $response->successful() ? ($response->json() ?? []) : [];
+            } catch (\Throwable $e) {
+                Log::warning('Failed fetching provinces: ' . $e->getMessage());
+                return [];
+            }
+        });
+        if (!is_array($provinces)) {
+            $provinces = [];
+        }
+
+        // Auto-heal: if province_id was stored as name (e.g. 'Banten'), resolve to numeric ID
+        if ($settings->province_id && !is_numeric($settings->province_id) && !empty($provinces)) {
+            foreach ($provinces as $p) {
+                if (isset($p['name']) && strcasecmp(trim($p['name']), trim($settings->province_id)) === 0) {
+                    $settings->province_id = (string) $p['id'];
+                    $settings->saveQuietly();
+                    break;
+                }
+            }
+        }
 
         $cities = [];
         $provinceId = old('province_id', $settings->province_id);
-        if ($provinceId) {
-            $citiesResponse = Http::get("https://www.emsifa.com/api-wilayah-indonesia/api/regencies/{$provinceId}.json");
-            if ($citiesResponse->successful()) {
-                $cities = $citiesResponse->json();
+        if ($provinceId && is_numeric($provinceId)) {
+            $cities = cache()->remember("emsifa_regencies_{$provinceId}", 86400, function () use ($provinceId) {
+                try {
+                    $response = Http::timeout(6)->get("https://www.emsifa.com/api-wilayah-indonesia/api/regencies/{$provinceId}.json");
+                    return $response->successful() ? ($response->json() ?? []) : [];
+                } catch (\Throwable $e) {
+                    Log::warning("Failed fetching regencies for province {$provinceId}: " . $e->getMessage());
+                    return [];
+                }
+            });
+            if (!is_array($cities)) {
+                $cities = [];
             }
         }
 
@@ -53,7 +83,20 @@ class AppSettingsController extends Controller
         ]);
 
         $settings = AppSetting::firstOrNew();
-        $settings->fill($request->only(['app_name', 'province_id', 'off_schedule_surcharge']));
+        $settings->fill($request->only(['app_name', 'off_schedule_surcharge']));
+
+        $provinceId = $request->input('province_id');
+        if ($provinceId && !is_numeric($provinceId)) {
+            $provinces = cache()->get('emsifa_provinces', []);
+            foreach ($provinces as $p) {
+                if (isset($p['name']) && strcasecmp(trim($p['name']), trim($provinceId)) === 0) {
+                    $provinceId = (string) $p['id'];
+                    break;
+                }
+            }
+        }
+        $settings->province_id = $provinceId;
+
         if (!$request->filled('off_schedule_surcharge')) {
             $settings->off_schedule_surcharge = 0;
         }
