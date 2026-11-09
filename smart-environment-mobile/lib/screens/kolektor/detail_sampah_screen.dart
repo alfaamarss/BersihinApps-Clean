@@ -296,7 +296,14 @@ class _DetailSampahScreenState extends State<DetailSampahScreen> {
           appLog('✅ [DetailSampah] Off-schedule complete SUCCESS');
         } catch (e) {
           success = false;
-          message = e.toString().replaceAll('Exception: ', '');
+          final errorStr = e.toString().replaceAll('Exception: ', '');
+          if (errorStr.contains('ClientLoad failed') ||
+              errorStr.contains('XMLHttpRequest') ||
+              errorStr.contains('Failed to fetch')) {
+            message = 'Gagal mengirim data ke server (koneksi terputus atau ukuran foto terlalu besar). Silakan coba lagi.';
+          } else {
+            message = errorStr;
+          }
           appLog('❌ [DetailSampah] Off-schedule complete FAILED: $message');
         }
       } else {

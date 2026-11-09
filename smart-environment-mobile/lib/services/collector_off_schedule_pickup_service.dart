@@ -110,6 +110,8 @@ class CollectorOffSchedulePickupService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return Map<String, dynamic>.from(data['data']);
+      } else if (response.statusCode == 413) {
+        throw Exception('Ukuran foto terlalu besar untuk server. Silakan gunakan foto yang lebih kecil.');
       } else if (response.statusCode == 422) {
         final error = jsonDecode(response.body);
         final errors = error['errors'] as Map<String, dynamic>?;
@@ -122,6 +124,8 @@ class CollectorOffSchedulePickupService {
       } else {
         throw Exception('Failed to complete pickup: ${response.statusCode}');
       }
+    } on http.ClientException catch (e) {
+      throw Exception('Koneksi ke server terputus (${e.message}). Pastikan jaringan stabil dan ukuran foto tidak terlalu besar.');
     } catch (e) {
       rethrow;
     }

@@ -45,7 +45,12 @@ class _AmbilFotoScreenState extends State<AmbilFotoScreen> {
   }
 
   Future<void> _ambilFoto() async {
-    final pickedFile = await _picker.pickImage(source: ImageSource.camera);
+    final pickedFile = await _picker.pickImage(
+      source: ImageSource.camera,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 70,
+    );
     if (pickedFile != null) {
       // Jangan update state di sini, langsung navigate ke review
       // Navigate ke ReviewFotoScreen setelah foto diambil

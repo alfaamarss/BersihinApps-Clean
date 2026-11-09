@@ -34,7 +34,12 @@ class _ReviewFotoScreenState extends State<ReviewFotoScreen> {
 
   Future<void> _retakePhoto() async {
     final ImagePicker picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.camera);
+    final pickedFile = await picker.pickImage(
+      source: ImageSource.camera,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 70,
+    );
 
     if (pickedFile != null) {
       // Jika user mengambil foto baru, replace foto lama
@@ -48,6 +53,7 @@ class _ReviewFotoScreenState extends State<ReviewFotoScreen> {
               address: widget.address,
               idPengambilan: widget.idPengambilan,
               imageFile: pickedFile,
+              isOffSchedule: widget.isOffSchedule,
             ),
           ),
         );

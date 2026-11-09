@@ -652,7 +652,9 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen> {
     try {
       final XFile? pickedFile = await ImagePicker().pickImage(
         source: source,
-        imageQuality: 80,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 75,
       );
 
       if (pickedFile != null) {
