@@ -128,13 +128,13 @@ class PaymentController extends Controller
                             'expired_at' => $payment->expired_at?->toIso8601String(),
                             'created_at' => $payment->created_at->toIso8601String(),
                             'metadata' => $payment->metadata,
-                            'va_number' => $payment->metadata['va_number'] ?? null,
-                            'bank' => $payment->metadata['bank'] ?? null,
-                            'qr_string' => $payment->metadata['qr_string'] ?? $payment->metadata['qris_string'] ?? null,
-                            'payment_url' => $payment->metadata['payment_url'] ?? $payment->metadata['deeplink'] ?? null,
-                            'virtual_account' => isset($payment->metadata['va_number']) ? [
-                                'bank' => $payment->metadata['bank'] ?? null,
-                                'va_number' => $payment->metadata['va_number'],
+                            'va_number' => $payment->va_number ?? $payment->metadata['va_number'] ?? null,
+                            'bank' => $payment->payment_channel ? str_replace('_va', '', $payment->payment_channel) : ($payment->metadata['bank'] ?? null),
+                            'qr_string' => $payment->qr_string ?? $payment->metadata['qr_string'] ?? $payment->metadata['qris_string'] ?? null,
+                            'payment_url' => $payment->payment_url ?? $payment->metadata['payment_url'] ?? $payment->metadata['deeplink'] ?? null,
+                            'virtual_account' => ($payment->va_number ?? $payment->metadata['va_number'] ?? null) ? [
+                                'bank' => $payment->payment_channel ? str_replace('_va', '', $payment->payment_channel) : ($payment->metadata['bank'] ?? null),
+                                'va_number' => $payment->va_number ?? $payment->metadata['va_number'],
                             ] : null,
                         ];
                     }),
@@ -528,10 +528,10 @@ class PaymentController extends Controller
      */
     public function simulatePay(string $orderId)
     {
-        if (!app()->environment('local', 'testing')) {
+        if (!app()->environment('local', 'testing') && !$this->midtransService->isMockMode()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Simulate payment is disabled in production.'
+                'message' => 'Simulate payment is disabled in production with live Midtrans credentials.'
             ], 403);
         }
 

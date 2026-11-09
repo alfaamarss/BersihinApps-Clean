@@ -258,8 +258,9 @@ class InvoiceController extends Controller
      */
     public function dummyPay(Request $request, string $id)
     {
-        if (!app()->environment('local', 'testing')) {
-            return $this->error('Dummy payment is disabled in production.', 403);
+        $midtransService = app(\App\Services\MidtransService::class);
+        if (!app()->environment('local', 'testing') && !$midtransService->isMockMode()) {
+            return $this->error('Dummy payment is disabled in production with live Midtrans credentials.', 403);
         }
 
         $user = $request->user();
