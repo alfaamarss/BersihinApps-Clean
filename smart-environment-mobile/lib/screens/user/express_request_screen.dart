@@ -7,6 +7,7 @@ import '../../services/off_schedule_pickup_service.dart';
 import '../../models/service_account.dart';
 import '../../models/off_schedule_pickup.dart' hide ServiceAccount;
 import 'off_schedule_pickup_detail_screen.dart';
+import '../../widgets/auto_fill_demo_button.dart';
 
 class ExpressRequestScreen extends StatefulWidget {
   const ExpressRequestScreen({super.key});
@@ -367,6 +368,43 @@ class _ExpressRequestScreenState extends State<ExpressRequestScreen> {
         _selectedTime = picked;
       });
     }
+  }
+
+  Future<bool> _autoFillDemo() async {
+    if (_isLoadingAccounts) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Akun layanan masih sedang dimuat.')),
+      );
+      return false;
+    }
+
+    ServiceAccount? demoAccount;
+    for (final account in _serviceAccounts) {
+      if (int.tryParse(account.id) != null) {
+        demoAccount = account;
+        break;
+      }
+    }
+
+    if (demoAccount == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tidak ada akun layanan yang dapat dipilih.'),
+        ),
+      );
+      return false;
+    }
+
+    final tomorrow = DateTime.now().add(const Duration(days: 1));
+    setState(() {
+      _selectedAccount = demoAccount;
+      _selectedDate = DateTime(tomorrow.year, tomorrow.month, tomorrow.day);
+      _selectedTime = const TimeOfDay(hour: 9, minute: 0);
+      _noteController.text =
+          '3 kantong sampah campuran (organik dan anorganik). '
+          'Mohon dijemput di alamat akun layanan.';
+    });
+    return true;
   }
 
   // Fungsi untuk mengirim request
@@ -842,6 +880,17 @@ class _ExpressRequestScreenState extends State<ExpressRequestScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              AutoFillDemoButton(
+                isFormEmpty:
+                    _selectedDate == null &&
+                    _selectedTime == null &&
+                    _selectedAccount == null &&
+                    _noteController.text.trim().isEmpty &&
+                    !_skipNextScheduled,
+                onFill: _autoFillDemo,
+              ),
+              const SizedBox(height: 16),
+
               // Waktu & Tanggal Penjemputan
               Text(
                 'Waktu & Tanggal Penjemputan',
@@ -1057,7 +1106,9 @@ class _ExpressRequestScreenState extends State<ExpressRequestScreen> {
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.orange.shade600.withValues(alpha: 0.4),
+                              color: Colors.orange.shade600.withValues(
+                                alpha: 0.4,
+                              ),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
@@ -1140,7 +1191,9 @@ class _ExpressRequestScreenState extends State<ExpressRequestScreen> {
                 decoration: BoxDecoration(
                   color: Colors.orange.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
+                  border: Border.all(
+                    color: Colors.orange.withValues(alpha: 0.2),
+                  ),
                 ),
                 child: CheckboxListTile(
                   value: _skipNextScheduled,
@@ -1331,8 +1384,8 @@ class _ExpressRequestScreenState extends State<ExpressRequestScreen> {
                                           Container(
                                             padding: const EdgeInsets.all(8),
                                             decoration: BoxDecoration(
-                                              color: primaryColor.withValues(alpha:
-                                                0.1,
+                                              color: primaryColor.withValues(
+                                                alpha: 0.1,
                                               ),
                                               borderRadius:
                                                   BorderRadius.circular(8),
@@ -1486,8 +1539,8 @@ class _ExpressRequestScreenState extends State<ExpressRequestScreen> {
                                           ),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: primaryColor.withValues(alpha:
-                                                0.3,
+                                              color: primaryColor.withValues(
+                                                alpha: 0.3,
                                               ),
                                               blurRadius: 8,
                                               offset: const Offset(0, 2),

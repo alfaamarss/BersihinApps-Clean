@@ -22,6 +22,10 @@ File createFileFromBytes(String path, Uint8List bytes) {
   return File(path, bytes);
 }
 
+Future<File> createFileFromDemoAsset(String fileName, Uint8List bytes) async {
+  return File(fileName, bytes);
+}
+
 // Stub for SocketException (untuk web compatibility)
 class SocketException implements Exception {
   final String message;

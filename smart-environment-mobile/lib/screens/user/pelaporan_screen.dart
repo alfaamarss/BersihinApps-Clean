@@ -2,6 +2,7 @@ import 'package:beresin_app/utils/app_log.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -19,6 +20,7 @@ import '../../utils/file.dart' as custom_file;
 import '../../utils/file.dart'; // Import untuk createFileFromBytes
 import '../../utils/image_builder.dart';
 import '../../widgets/resolution_photos_gallery.dart';
+import '../../widgets/auto_fill_demo_button.dart';
 
 // Fungsi utama untuk menjalankan aplikasi
 void main() {
@@ -560,7 +562,9 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen> {
 
       // Debug print
       appLog('[SEARCH] _selectedType: $_selectedType');
-      appLog('[SEARCH] _deskripsiController.text: ${_deskripsiController.text}');
+      appLog(
+        '[SEARCH] _deskripsiController.text: ${_deskripsiController.text}',
+      );
       appLog('[SEARCH] _selectedServiceAccountId: $_selectedServiceAccountId');
 
       // Ambil data dari state dan controller
@@ -602,6 +606,44 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen> {
               navigator.pop(newReport);
             }
           });
+    }
+  }
+
+  Future<bool> _autoFillDemo() async {
+    try {
+      final imageData = await rootBundle.load('assets/images/dummy.jpg');
+      final demoImage = await custom_file.createFileFromDemoAsset(
+        'complaint-demo.jpg',
+        imageData.buffer.asUint8List(
+          imageData.offsetInBytes,
+          imageData.lengthInBytes,
+        ),
+      );
+      final demoType = _types.firstWhere(
+        (type) => type['value'] == 'sampah_menumpuk',
+      );
+
+      if (!mounted) return false;
+      setState(() {
+        _selectedType = demoType['value'];
+        _selectedLocation = null;
+        _lokasiController.text =
+            'Jl. Melati No. 12, RT 03/RW 05, Jakarta Selatan';
+        _deskripsiController.text =
+            'Sampah menumpuk di area permukiman.\n'
+            'Tumpukan sampah rumah tangga belum diangkut selama beberapa hari '
+            'dan mulai menimbulkan bau di sekitar permukiman.';
+        _selectedImages
+          ..clear()
+          ..add(demoImage);
+      });
+      return true;
+    } catch (error) {
+      if (!mounted) return false;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal memuat data contoh: $error')),
+      );
+      return false;
     }
   }
 
@@ -909,6 +951,17 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              AutoFillDemoButton(
+                isFormEmpty:
+                    _selectedType == null &&
+                    _deskripsiController.text.trim().isEmpty &&
+                    _lokasiController.text.trim().isEmpty &&
+                    _selectedServiceAccountId == null &&
+                    _selectedImages.isEmpty,
+                onFill: _autoFillDemo,
+              ),
+              const SizedBox(height: 16),
+
               // Area Foto dengan Tombol Ubah Foto - HANYA untuk Sampah Tidak Diangkut & Sampah Menumpuk
               if (_shouldShowPhotoAndLocation()) ...[
                 Container(
@@ -2544,7 +2597,9 @@ class _DetailLaporanTerkirimScreenState
 
     // Prioritaskan photoUrls (multiple photos dari API)
     if (widget.laporan.photoUrls.isNotEmpty) {
-      appLog('[IMG] Loading ${widget.laporan.photoUrls.length} images from API');
+      appLog(
+        '[IMG] Loading ${widget.laporan.photoUrls.length} images from API',
+      );
       imageWidget = _InstagramStylePhotoGalleryNetwork(
         photoUrls: widget.laporan.photoUrls,
       );
@@ -2746,8 +2801,8 @@ class _DetailLaporanTerkirimScreenState
                                 borderRadius: BorderRadius.circular(12),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.green.shade300.withValues(alpha:
-                                      0.5,
+                                    color: Colors.green.shade300.withValues(
+                                      alpha: 0.5,
                                     ),
                                     blurRadius: 8,
                                     offset: const Offset(0, 4),
@@ -3173,7 +3228,10 @@ class _DetailLaporanTerkirimScreenState
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Colors.red.shade50, Colors.red.shade100.withValues(alpha: 0.5)],
+          colors: [
+            Colors.red.shade50,
+            Colors.red.shade100.withValues(alpha: 0.5),
+          ],
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.red.shade300, width: 1.5),
@@ -4194,7 +4252,9 @@ class _ReportCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                           boxShadow: [
                             BoxShadow(
-                              color: _getBadgeTextColor().withValues(alpha: 0.3),
+                              color: _getBadgeTextColor().withValues(
+                                alpha: 0.3,
+                              ),
                               blurRadius: 4,
                               offset: const Offset(0, 2),
                             ),

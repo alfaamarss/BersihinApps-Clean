@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/user_storage.dart';
 import '../../services/collector_profile_service.dart';
+import '../../widgets/auto_fill_demo_button.dart';
 
 class EditAkunScreen extends StatefulWidget {
   const EditAkunScreen({super.key});
@@ -187,6 +188,14 @@ class _EditAkunScreenState extends State<EditAkunScreen> {
     }
   }
 
+  Future<bool> _autoFillDemo() async {
+    setState(() {
+      _nameController.text = 'Budi Santoso';
+      _phoneController.text = '081234567890';
+    });
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -220,7 +229,9 @@ class _EditAkunScreenState extends State<EditAkunScreen> {
                           color: const Color(0xFF009688).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: const Color(0xFF009688).withValues(alpha: 0.3),
+                            color: const Color(
+                              0xFF009688,
+                            ).withValues(alpha: 0.3),
                           ),
                         ),
                         child: Row(
@@ -241,6 +252,15 @@ class _EditAkunScreenState extends State<EditAkunScreen> {
                             ),
                           ],
                         ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      AutoFillDemoButton(
+                        isFormEmpty:
+                            _nameController.text.trim().isEmpty &&
+                            _phoneController.text.trim().isEmpty,
+                        onFill: _autoFillDemo,
+                        enabled: !_isSaving,
                       ),
                       const SizedBox(height: 24),
 

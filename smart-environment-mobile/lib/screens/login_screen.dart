@@ -16,11 +16,70 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _loading = false;
 
+  static const _demoAccounts = [
+    (
+      label: 'Admin',
+      email: 'admin@example.com',
+      icon: Icons.admin_panel_settings_outlined,
+    ),
+    (label: 'Warga', email: 'warga@example.com', icon: Icons.person_outline),
+    (
+      label: 'Collector',
+      email: 'collector@example.com',
+      icon: Icons.recycling_outlined,
+    ),
+  ];
+
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _selectDemoAccount({required String email}) async {
+    if (_loading) return;
+
+    if (_emailController.text.isNotEmpty ||
+        _passwordController.text.isNotEmpty) {
+      final shouldReplace = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Ganti isi form?'),
+          content: const Text(
+            'Email atau password sudah diisi. Ganti dengan akun contoh?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Batal'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Ganti'),
+            ),
+          ],
+        ),
+      );
+
+      if (shouldReplace != true || !mounted) return;
+    }
+
+    setState(() {
+      _emailController.text = email;
+      _passwordController.text = 'password';
+    });
+    FocusScope.of(context).unfocus();
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Email dan password contoh terisi. Tekan Login untuk melanjutkan.',
+          ),
+          duration: Duration(seconds: 3),
+        ),
+      );
   }
 
   Future<void> _login() async {
@@ -37,7 +96,10 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _loading = true);
     final auth = AuthService();
     // gunakan tuple (ok, message, user) dari AuthService
-    final (ok, message, user) = await auth.login(email: email, password: password);
+    final (ok, message, user) = await auth.login(
+      email: email,
+      password: password,
+    );
 
     if (!mounted) return;
     setState(() => _loading = false);
@@ -45,12 +107,12 @@ class _LoginScreenState extends State<LoginScreen> {
     if (ok) {
       // Ambil nama user dari UserStorage
       final userName = await UserStorage.getUserName() ?? 'User';
-      
+
       // Redirect berdasarkan role
       final isCollector = await UserStorage.isCollector();
-      
+
       if (!mounted) return;
-      
+
       if (isCollector) {
         Navigator.of(context).pushNamedAndRemoveUntil(
           '/home-kolektor',
@@ -213,6 +275,35 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
+              ),
+
+              const SizedBox(height: 20),
+
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Auto Fill Demo',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final account in _demoAccounts)
+                    OutlinedButton.icon(
+                      onPressed: _loading
+                          ? null
+                          : () => _selectDemoAccount(email: account.email),
+                      icon: Icon(account.icon, size: 18),
+                      label: Text(account.label),
+                    ),
+                ],
               ),
 
               const SizedBox(height: 15),

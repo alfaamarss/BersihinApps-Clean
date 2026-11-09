@@ -17,6 +17,7 @@ import '../../services/area_service.dart';
 import '../../services/config_service.dart';
 import '../../services/service_account_service.dart';
 import '../../services/notification_helper.dart';
+import '../../widgets/auto_fill_demo_button.dart';
 
 class TambahAkunLayananScreen extends StatefulWidget {
   const TambahAkunLayananScreen({super.key});
@@ -149,6 +150,53 @@ class _TambahAkunLayananScreenState extends State<TambahAkunLayananScreen> {
       });
       _showSnackBar('Gagal memuat data awal: ${_errorMessage(error)}');
     }
+
+  }
+
+  Future<bool> _autoFillDemo() async {
+    if (_kecamatanOptions.isEmpty) {
+      _showSnackBar('Data kecamatan belum tersedia.');
+      return false;
+    }
+
+    final kecamatan = _kecamatanOptions.first;
+    late final List<AreaOption> kelurahanOptions;
+    try {
+      kelurahanOptions = await _areaService.fetchKelurahan(
+        parentId: kecamatan.id,
+      );
+    } catch (error) {
+      if (!mounted) return false;
+      _showSnackBar('Gagal memuat kelurahan: ${_errorMessage(error)}');
+      return false;
+    }
+
+    if (!mounted) return false;
+    if (kelurahanOptions.isEmpty) {
+      _showSnackBar('Kelurahan untuk ${kecamatan.name} tidak ditemukan.');
+      return false;
+    }
+
+    var demoName = 'Pelanggan Demo';
+    var suffix = 1;
+    while (_existingAccountNames.contains(demoName.toLowerCase())) {
+      demoName = 'Pelanggan Demo ${suffix++}';
+    }
+
+    _namaController.text = demoName;
+    _teleponController.text = '081234567890';
+    _rwController.text = 'RW 05';
+    _detailAlamatController.text = 'Jl. Melati No. 12';
+
+    setState(() {
+      _selectedKecamatanOption = kecamatan;
+      _kecamatanController.text = kecamatan.name;
+      _kelurahanOptions = kelurahanOptions;
+      _selectedKelurahanOption = kelurahanOptions.first;
+      _kelurahanController.text = kelurahanOptions.first.name;
+    });
+
+    return true;
   }
 
   String _errorMessage(Object error) {
@@ -1459,6 +1507,19 @@ class _TambahAkunLayananScreenState extends State<TambahAkunLayananScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              AutoFillDemoButton(
+                isFormEmpty:
+                    _namaController.text.trim().isEmpty &&
+                    _teleponController.text.trim().isEmpty &&
+                    _detailAlamatController.text.trim().isEmpty &&
+                    _rwController.text.trim().isEmpty &&
+                    _selectedKecamatanOption == null &&
+                    _selectedKelurahanOption == null,
+                onFill: _autoFillDemo,
+                enabled: !_isSubmitting,
+              ),
+              const SizedBox(height: 16),
+
               _buildLabel('Nama Lengkap'),
               TextFormField(
                 controller: _namaController,
